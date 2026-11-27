@@ -43,6 +43,7 @@ from product_studio.balance import (
 
 PACKAGE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = PACKAGE_DIR / "static"
+HEALTHZ_PATH = "/healthz"
 
 DEFAULT_GATEWAY_URL = "https://api.openai.com/v1"
 
@@ -176,6 +177,8 @@ async def basic_auth_middleware(
     request: Request,
     call_next: Callable[[Request], Awaitable[Response]],
 ) -> Response:
+    if request.url.path == HEALTHZ_PATH and request.method in {"GET", "HEAD"}:
+        return await call_next(request)
     expected_key = get_access_key()
     if not expected_key:
         return PlainTextResponse(
@@ -289,6 +292,11 @@ def postprocess_output(
 @router.get("/")
 async def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
+
+
+@router.get(HEALTHZ_PATH)
+async def healthz() -> JSONResponse:
+    return JSONResponse({"status": "ok"})
 
 
 @router.get("/api/config")

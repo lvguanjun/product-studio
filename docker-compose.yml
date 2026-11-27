@@ -1,0 +1,16 @@
+services:
+  product-studio:
+    image: ghcr.io/lvguanjun/product-studio:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${HOST_PORT:-8765}:8765"
+    env_file:
+      - .env
+    environment:
+      API_KEY: "${API_KEY:-${OPENAI_API_KEY:?Set API_KEY (or OPENAI_API_KEY) in .env}}"
+      ACCESS_KEY: "${ACCESS_KEY:?Set ACCESS_KEY in .env}"
+      HOST: "0.0.0.0"
+      PORT: "8765"
+      OUTPUT_DIR: "/app/outputs"
+    volumes:
+      - ./outputs:/app/outputs
