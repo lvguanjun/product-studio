@@ -864,16 +864,16 @@ function syncToolbarUI() {
   });
 
   const exportSplitWrap = document.getElementById("exportSplitWrap");
-  const zipBtn = document.getElementById("zipBtn");
+  const batchExportBtn = document.getElementById("batchExportBtn");
   const exportMenuBtn = document.getElementById("exportMenuBtn");
   const exportVariantClass =
-    BUTTON_VARIANT_CLASS[toolbarState.zipButton.variant] || "btn";
+    BUTTON_VARIANT_CLASS[toolbarState.exportButton.variant] || "btn";
 
-  zipBtn.disabled = toolbarState.zipButton.disabled;
-  zipBtn.className = exportVariantClass;
-  zipBtn.textContent = isBatchExporting && batchExportProgressText
+  batchExportBtn.disabled = toolbarState.exportButton.disabled;
+  batchExportBtn.className = exportVariantClass;
+  batchExportBtn.textContent = isBatchExporting && batchExportProgressText
     ? batchExportProgressText
-    : toolbarState.zipButton.label;
+    : toolbarState.exportButton.label;
 
   if (exportSplitWrap && exportMenuBtn) {
     exportMenuBtn.hidden = !toolbarState.exportSplitVisible;
@@ -1162,11 +1162,19 @@ function triggerPrimaryExport() {
   toggleExportMenu(false);
   const completed = getCompletedBatchItems();
   if (!completed.length) return;
-  if (completed.length === 1) {
+  const exportMode = UI.resolvePrimaryExportMode(
+    completed.length,
+    supportsFolderExport()
+  );
+  if (exportMode === "single") {
     const onlyResult = completed[0].result;
     const exportName = UI.deriveExportFilename(onlyResult);
     triggerAnchorDownload(onlyResult.url, exportName);
     showToast(`已开始下载「${exportName}」`);
+    return;
+  }
+  if (exportMode === "folder") {
+    downloadBatchToFolder();
     return;
   }
   downloadAllZip();
@@ -1208,17 +1216,17 @@ async function downloadBatchToFolder() {
       showToast(`已保存 ${summary.saved} 张成品图${folderLabel}`);
     } else if (summary.saved > 0) {
       showToast(
-        `已保存 ${summary.saved}/${summary.total} 张，${summary.failed} 张失败，可重试或改用 ZIP`,
+        `已保存 ${summary.saved}/${summary.total} 张，${summary.failed} 张失败，可重试或从右侧下拉改用 ZIP`,
         { duration: 5000 }
       );
     } else {
       showToast(
-        `保存失败（${summary.failed} 张），请检查目录权限或改用 ZIP`,
+        `保存失败（${summary.failed} 张），请检查目录权限或从右侧下拉改用 ZIP`,
         { duration: 5000 }
       );
     }
   } catch {
-    showToast("无法写入所选文件夹，请检查权限或改用打包 ZIP", { duration: 4500 });
+    showToast("无法写入所选文件夹，请检查权限或从右侧下拉改用 ZIP", { duration: 4500 });
   } finally {
     isBatchExporting = false;
     batchExportProgressText = "";

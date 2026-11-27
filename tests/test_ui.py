@@ -57,19 +57,19 @@ def test_toolbar_state_highlights_generate_when_pending_items_exist() -> None:
     assert state["runButton"]["variant"] == "primary"
     assert state["runButton"]["label"] == "开始批量生成 (2 张待处理)"
     assert not state["runButton"]["disabled"]
-    assert state["zipButton"]["variant"] == "secondary"
-    assert not state["zipButton"]["disabled"]
+    assert state["exportButton"]["variant"] == "secondary"
+    assert not state["exportButton"]["disabled"]
     assert not state["retryFailedVisible"]
 
 
 @pytest.mark.node
-def test_toolbar_state_switches_primary_highlight_to_zip_when_all_done() -> None:
+def test_toolbar_state_switches_primary_highlight_to_export_when_all_done() -> None:
     state = _compute_toolbar_state(total=4, doneCount=4)
     assert state["runButton"]["variant"] == "secondary"
     assert state["runButton"]["label"] == "重新生成全部 (4 张)"
     assert not state["runButton"]["disabled"]
-    assert state["zipButton"]["variant"] == "primary"
-    assert not state["zipButton"]["disabled"]
+    assert state["exportButton"]["variant"] == "primary"
+    assert not state["exportButton"]["disabled"]
 
 
 @pytest.mark.node
@@ -80,7 +80,7 @@ def test_toolbar_state_running_and_stopping_labels() -> None:
     assert running["runButton"]["variant"] == "danger"
     assert running["runButton"]["label"] == "停止剩余任务 (2/5)"
     assert not running["runButton"]["disabled"]
-    assert running["zipButton"]["variant"] == "secondary"
+    assert running["exportButton"]["variant"] == "secondary"
 
     stopping = _compute_toolbar_state(
         total=5,
@@ -98,23 +98,23 @@ def test_toolbar_state_handles_single_item_running_without_batch_mode() -> None:
     mid_run = _compute_toolbar_state(total=2, doneCount=1, runningCount=1)
     assert mid_run["runButton"]["disabled"]
     assert mid_run["runButton"]["label"] == "生成中... (1 张)"
-    assert mid_run["zipButton"]["variant"] == "secondary"
+    assert mid_run["exportButton"]["variant"] == "secondary"
 
     only_running = _compute_toolbar_state(total=1, doneCount=0, runningCount=1)
     assert only_running["runButton"]["disabled"]
     assert only_running["runButton"]["label"] == "生成中... (1 张)"
-    assert only_running["zipButton"]["disabled"]
+    assert only_running["exportButton"]["disabled"]
 
 
 @pytest.mark.node
-def test_toolbar_state_disabled_generation_promotes_zip_when_results_exist() -> None:
+def test_toolbar_state_disabled_generation_promotes_export_when_results_exist() -> None:
     state = _compute_toolbar_state(
         total=3, doneCount=2, pendingCount=1, generationDisabled=True
     )
     assert state["runButton"]["disabled"]
     assert state["runButton"]["label"] == "余额不足，已禁用生图"
-    assert state["zipButton"]["variant"] == "primary"
-    assert not state["zipButton"]["disabled"]
+    assert state["exportButton"]["variant"] == "primary"
+    assert not state["exportButton"]["disabled"]
 
 
 @pytest.mark.node
@@ -242,30 +242,60 @@ def test_derive_export_filename_and_plan_batch_export_names() -> None:
 
 
 @pytest.mark.node
-def test_toolbar_state_handles_single_image_export_and_split_folder_export() -> None:
+def test_toolbar_state_prioritizes_folder_export_when_supported_and_falls_back_to_zip() -> (
+    None
+):
+    assert _run_node_eval("ui.resolvePrimaryExportMode(0, true)") == "folder"
+    assert _run_node_eval("ui.resolvePrimaryExportMode(0, false)") == "zip"
+    assert _run_node_eval("ui.resolvePrimaryExportMode(1, true)") == "single"
+    assert _run_node_eval("ui.resolvePrimaryExportMode(1, false)") == "single"
+    assert _run_node_eval("ui.resolvePrimaryExportMode(3, true)") == "folder"
+    assert _run_node_eval("ui.resolvePrimaryExportMode(3, false)") == "zip"
+
+    empty_with_folder = _compute_toolbar_state(
+        total=3, doneCount=0, pendingCount=3, supportsFolderExport=True
+    )
+    assert empty_with_folder["exportButton"]["mode"] == "folder"
+    assert empty_with_folder["exportButton"]["label"] == "保存到文件夹"
+    assert empty_with_folder["exportButton"]["disabled"]
+    assert not empty_with_folder["exportSplitVisible"]
+    assert empty_with_folder["exportSplitDisabled"]
+
+    empty_without_folder = _compute_toolbar_state(
+        total=3, doneCount=0, pendingCount=3, supportsFolderExport=False
+    )
+    assert empty_without_folder["exportButton"]["mode"] == "zip"
+    assert empty_without_folder["exportButton"]["label"] == "打包下载 ZIP"
+    assert empty_without_folder["exportButton"]["disabled"]
+    assert not empty_without_folder["exportSplitVisible"]
+    assert empty_without_folder["exportSplitDisabled"]
+
     single_done = _compute_toolbar_state(
         total=1, doneCount=1, supportsFolderExport=True
     )
-    assert single_done["zipButton"]["mode"] == "single"
-    assert single_done["zipButton"]["label"] == "下载图片 (1 张)"
-    assert single_done["zipButton"]["variant"] == "primary"
-    assert not single_done["zipButton"]["disabled"]
+    assert single_done["exportButton"]["mode"] == "single"
+    assert single_done["exportButton"]["label"] == "下载图片 (1 张)"
+    assert single_done["exportButton"]["variant"] == "primary"
+    assert not single_done["exportButton"]["disabled"]
     assert not single_done["exportSplitVisible"]
+    assert single_done["exportSplitDisabled"]
 
     multi_with_folder = _compute_toolbar_state(
         total=3, doneCount=2, pendingCount=1, supportsFolderExport=True
     )
-    assert multi_with_folder["zipButton"]["mode"] == "zip"
-    assert multi_with_folder["zipButton"]["label"] == "打包下载 ZIP"
-    assert not multi_with_folder["zipButton"]["disabled"]
+    assert multi_with_folder["exportButton"]["mode"] == "folder"
+    assert multi_with_folder["exportButton"]["label"] == "保存到文件夹 (2 张)"
+    assert not multi_with_folder["exportButton"]["disabled"]
     assert multi_with_folder["exportSplitVisible"]
     assert not multi_with_folder["exportSplitDisabled"]
 
     multi_without_folder = _compute_toolbar_state(
         total=3, doneCount=3, supportsFolderExport=False
     )
-    assert multi_without_folder["zipButton"]["mode"] == "zip"
+    assert multi_without_folder["exportButton"]["mode"] == "zip"
+    assert multi_without_folder["exportButton"]["label"] == "打包下载 ZIP (3 张)"
     assert not multi_without_folder["exportSplitVisible"]
+    assert multi_without_folder["exportSplitDisabled"]
 
     exporting_while_running = _compute_toolbar_state(
         total=4,
@@ -277,7 +307,7 @@ def test_toolbar_state_handles_single_image_export_and_split_folder_export() -> 
         isExporting=True,
     )
     assert not exporting_while_running["runButton"]["disabled"]
-    assert exporting_while_running["zipButton"]["disabled"]
+    assert exporting_while_running["exportButton"]["disabled"]
     assert exporting_while_running["exportSplitDisabled"]
 
 
@@ -431,7 +461,7 @@ def test_single_column_layout_without_permanent_sidebar(
 def test_workspace_vertical_order_and_toolbar_button_sequence(
     ui_client: TestClient, auth_headers: dict[str, str]
 ) -> None:
-    _, parser = _parse_index_html(ui_client, auth_headers)
+    html, parser = _parse_index_html(ui_client, auth_headers)
     ids = [elem_id for elem_id, _, _ in parser.elements]
     by_id = {elem_id: (tag, attrs) for elem_id, tag, attrs in parser.elements}
 
@@ -444,12 +474,13 @@ def test_workspace_vertical_order_and_toolbar_button_sequence(
         "runBatchBtn",
         "retryFailedBtn",
         "exportSplitWrap",
-        "zipBtn",
+        "batchExportBtn",
         "exportMenuBtn",
         "exportMenu",
-        "folderExportBtn",
+        "zipExportMenuItem",
         "clearQueueBtn",
         "cardGrid",
+        "historyZipBtn",
     ):
         assert required_id in by_id, f"Missing element #{required_id}"
 
@@ -458,12 +489,17 @@ def test_workspace_vertical_order_and_toolbar_button_sequence(
     assert ids.index("dropzone") < ids.index("toolbar")
     assert ids.index("toolbar") < ids.index("runBatchBtn")
     assert ids.index("runBatchBtn") < ids.index("retryFailedBtn")
-    assert ids.index("retryFailedBtn") < ids.index("zipBtn")
-    assert ids.index("zipBtn") < ids.index("exportMenuBtn")
+    assert ids.index("retryFailedBtn") < ids.index("batchExportBtn")
+    assert ids.index("batchExportBtn") < ids.index("exportMenuBtn")
     assert ids.index("exportMenuBtn") < ids.index("clearQueueBtn")
     assert ids.index("clearQueueBtn") < ids.index("cardGrid")
     assert "hidden" in by_id["exportMenuBtn"][1]
     assert "hidden" in by_id["exportMenu"][1]
+    assert by_id["batchExportBtn"][1].get("onclick") == "triggerPrimaryExport()"
+    assert by_id["zipExportMenuItem"][1].get("onclick") == "downloadAllZip()"
+    assert by_id["historyZipBtn"][1].get("onclick") == "downloadHistoryZip()"
+    assert "合并为单个压缩包，适合归档或转发" in html
+    assert "保存到本地文件夹" not in html
 
     clear_classes = (by_id["clearQueueBtn"][1].get("class") or "").split()
     assert "btn-danger" not in clear_classes

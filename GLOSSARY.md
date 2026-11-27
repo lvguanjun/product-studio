@@ -25,11 +25,11 @@ Downloading multiple completed **Product Images** together in one action, as opp
 _Avoid_: Bulk save, mass download
 
 **ZIP Export**:
-The default **Batch Export** mode that packages completed **Product Images** into a single ZIP archive.
+A **Batch Export** mode that packages completed **Product Images** into a single ZIP archive.
 _Avoid_: Archive download, bundle
 
 **Folder Export**:
-An optional **Batch Export** mode that writes completed **Product Images** directly as individual files into a user-chosen local folder without archiving.
+A **Batch Export** mode that writes completed **Product Images** directly as individual files into a user-chosen local folder without archiving.
 _Avoid_: Multi-download, direct download, bulk save
 
 **Export Filename**:

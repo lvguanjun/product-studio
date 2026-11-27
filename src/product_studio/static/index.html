@@ -130,16 +130,16 @@
             <button class="btn btn-primary" id="runBatchBtn" type="button" onclick="startOrStopBatch()">开始批量生成</button>
             <button class="btn btn-sm" id="retryFailedBtn" type="button" onclick="retryFailedItems()" style="display:none;">重试失败项</button>
             <div class="split-btn" id="exportSplitWrap">
-              <button class="btn" id="zipBtn" type="button" onclick="triggerPrimaryExport()" disabled>打包下载 ZIP</button>
+              <button class="btn" id="batchExportBtn" type="button" onclick="triggerPrimaryExport()" disabled>打包下载 ZIP</button>
               <button class="btn split-btn-toggle" id="exportMenuBtn" type="button" hidden disabled aria-haspopup="menu" aria-expanded="false" aria-controls="exportMenu" aria-label="更多导出方式" onclick="toggleExportMenu()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
               </button>
               <div class="split-menu" id="exportMenu" role="menu" aria-label="批量导出方式" hidden>
-                <button class="split-menu-item" id="folderExportBtn" type="button" role="menuitem" onclick="downloadBatchToFolder()">
-                  <span class="split-menu-title">保存到本地文件夹</span>
-                  <span class="split-menu-desc">直接写入图片免解压，重名自动顺延</span>
+                <button class="split-menu-item" id="zipExportMenuItem" type="button" role="menuitem" onclick="downloadAllZip()">
+                  <span class="split-menu-title">打包下载 ZIP</span>
+                  <span class="split-menu-desc">合并为单个压缩包，适合归档或转发</span>
                 </button>
               </div>
             </div>

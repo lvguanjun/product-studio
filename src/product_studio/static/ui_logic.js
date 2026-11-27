@@ -7,6 +7,17 @@
     root.ProductStudioUI = exportsObj;
   }
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  function resolvePrimaryExportMode(doneCount, supportsFolderExport = false) {
+    if (doneCount === 1) return "single";
+    return supportsFolderExport ? "folder" : "zip";
+  }
+
+  function formatPrimaryExportLabel(exportMode, doneCount) {
+    if (exportMode === "single") return "下载图片 (1 张)";
+    const baseLabel = exportMode === "folder" ? "保存到文件夹" : "打包下载 ZIP";
+    return doneCount >= 2 ? `${baseLabel} (${doneCount} 张)` : baseLabel;
+  }
+
   function computeToolbarState({
     total,
     doneCount,
@@ -22,17 +33,17 @@
   }) {
     const runnable = pendingCount + errorCount;
     const retryFailedVisible = errorCount > 0 && !isBatchRunning;
-    const exportMode = doneCount === 1 ? "single" : "zip";
-    const exportLabel = doneCount === 1 ? "下载图片 (1 张)" : "打包下载 ZIP";
-    const zipDisabled = doneCount === 0 || isExporting;
+    const exportMode = resolvePrimaryExportMode(doneCount, supportsFolderExport);
+    const exportLabel = formatPrimaryExportLabel(exportMode, doneCount);
+    const exportDisabled = doneCount === 0 || isExporting;
     const exportSplitVisible = Boolean(supportsFolderExport && doneCount >= 2);
-    const exportSplitDisabled = doneCount < 2 || isExporting;
+    const exportSplitDisabled = !exportSplitVisible || isExporting;
 
     function buildExportState(variant) {
       return {
-        zipButton: {
+        exportButton: {
           variant,
-          disabled: zipDisabled,
+          disabled: exportDisabled,
           mode: exportMode,
           label: exportLabel,
         },
@@ -369,6 +380,7 @@
   }
 
   return {
+    resolvePrimaryExportMode,
     computeToolbarState,
     isPromptModified,
     hasCustomAdvancedSettings,

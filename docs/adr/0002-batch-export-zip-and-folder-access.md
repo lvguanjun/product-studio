@@ -1,3 +1,5 @@
+Status: superseded by ADR-0003
+
 # Default to ZIP Export with File System Access Folder Export over HTTPS
 
 We keep **ZIP Export** as the default **Batch Export** action and offer **Folder Export** via the browser File System Access API (`showDirectoryPicker`) as a secondary split-button option in the **Batch** workspace, assuming the studio is served over HTTPS. Browsers that do not support `showDirectoryPicker` (such as Safari, Firefox, and mobile browsers) hide the Folder Export option and degrade cleanly to **ZIP Export**; we deliberately do not implement throttled multi-anchor (`<a>`) download loops.

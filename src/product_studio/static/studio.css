@@ -959,7 +959,7 @@ textarea:focus, select:focus, input[type="text"]:focus {
   align-items: stretch;
 }
 
-.split-btn.has-split > #zipBtn {
+.split-btn.has-split > #batchExportBtn {
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
 }
@@ -1827,7 +1827,7 @@ body[data-inspect-bg="dark"] .img-pane.result-pane .placeholder-state {
     flex: 1 1 auto;
   }
 
-  .toolbar-actions .split-btn > #zipBtn {
+  .toolbar-actions .split-btn > #batchExportBtn {
     flex: 1 1 auto;
   }
 
