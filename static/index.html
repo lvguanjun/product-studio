@@ -19,6 +19,8 @@
       --accent-soft: #eff6ff;
       --success: #059669;
       --success-soft: #ecfdf5;
+      --warn: #d97706;
+      --warn-soft: #fffbeb;
       --danger: #dc2626;
       --danger-soft: #fef2f2;
       --radius: 12px;
@@ -107,10 +109,45 @@
       color: var(--success);
     }
 
+    .pill.warn {
+      background: var(--warn-soft);
+      border-color: #fde68a;
+      color: var(--warn);
+    }
+
     .pill.err {
       background: var(--danger-soft);
       border-color: #fecaca;
       color: var(--danger);
+    }
+
+    .balance-pill {
+      cursor: help;
+    }
+
+    .balance-banner {
+      display: none;
+      max-width: 1480px;
+      margin: 14px auto 0;
+      padding: 10px 24px 0;
+    }
+
+    .balance-banner.show {
+      display: block;
+    }
+
+    .balance-banner-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 11px 14px;
+      border-radius: var(--radius);
+      background: var(--danger-soft);
+      border: 1px solid #fecaca;
+      color: #991b1b;
+      font-size: 13px;
     }
 
     .dot {
@@ -763,9 +800,14 @@
         <button class="tab-btn active" id="tabBatch" onclick="switchTab('batch')">批量工作台</button>
         <button class="tab-btn" id="tabHistory" onclick="switchTab('history')">历史生成</button>
       </div>
+      <span class="pill balance-pill" id="balanceStatus" title="正在读取余额..."><span class="dot"></span>余额读取中...</span>
       <span class="pill" id="gatewayStatus"><span class="dot"></span>检测网关...</span>
     </div>
   </header>
+
+  <div class="balance-banner" id="balanceBanner">
+    <div class="balance-banner-inner" id="balanceBannerText"></div>
+  </div>
 
   <main>
     <aside class="panel sidebar">
@@ -934,6 +976,119 @@
     let historyItems = [];
     let isBatchRunning = false;
     let stopRequested = false;
+    let balanceState = null;
+
+    function formatUsd(amount, digits = 2) {
+      const num = Number(amount);
+      if (!Number.isFinite(num)) return "$0.00";
+      return `$${num.toFixed(digits)}`;
+    }
+
+    function isGenerationDisabled() {
+      return Boolean(balanceState && balanceState.disabled);
+    }
+
+    function guardGenerationAllowed() {
+      if (!isGenerationDisabled()) return true;
+      showToast((balanceState && balanceState.disabled_reason) || "余额低于阈值，已禁用生图");
+      return false;
+    }
+
+    function formatResetTime(isoString, timezoneName) {
+      if (!isoString) return "-";
+      const parsed = new Date(isoString);
+      if (Number.isNaN(parsed.getTime())) return isoString;
+      const targetTz = timezoneName || "UTC";
+      try {
+        return `${parsed.toLocaleString(undefined, { timeZone: targetTz })} (${targetTz})`;
+      } catch {
+        return `${parsed.toISOString()} (${targetTz})`;
+      }
+    }
+
+    function isStaleBalanceSnapshot(current, incoming) {
+      if (!current || !incoming) return false;
+      if (!current.configured || !incoming.configured) return false;
+      if (
+        current.key_fingerprint !== incoming.key_fingerprint ||
+        current.billing_month !== incoming.billing_month
+      ) {
+        return false;
+      }
+      const curCount = Number(current.request_count || 0);
+      const nextCount = Number(incoming.request_count || 0);
+      if (nextCount < curCount) return true;
+      if (nextCount === curCount && Number(incoming.used_usd || 0) < Number(current.used_usd || 0)) {
+        return true;
+      }
+      return false;
+    }
+
+    function updateBalanceUI(nextBalance, options = {}) {
+      if (!nextBalance || typeof nextBalance !== "object") return;
+      if (!options.authoritative && isStaleBalanceSnapshot(balanceState, nextBalance)) {
+        return;
+      }
+      balanceState = nextBalance;
+      const pillEl = document.getElementById("balanceStatus");
+      const bannerEl = document.getElementById("balanceBanner");
+      const bannerTextEl = document.getElementById("balanceBannerText");
+
+      if (!nextBalance.configured) {
+        pillEl.className = "pill balance-pill err";
+        pillEl.innerHTML = `<span class="dot"></span>未配置 API_KEY`;
+        pillEl.title = nextBalance.disabled_reason || "未配置 API_KEY";
+        bannerEl.classList.remove("show");
+        renderQueue();
+        return;
+      }
+
+      const remaining = formatUsd(nextBalance.remaining_usd, 2);
+      const budget = formatUsd(nextBalance.monthly_budget_usd, 2);
+      const used = formatUsd(nextBalance.used_usd, 3);
+      const disableThreshold = formatUsd(nextBalance.disable_threshold_usd, 2);
+      const warnThreshold = formatUsd(nextBalance.warn_threshold_usd, 2);
+      const resetLabel = formatResetTime(nextBalance.next_reset_at, nextBalance.timezone);
+      const offsetLine = nextBalance.offset_used_usd > 0
+        ? `\n含外部校准偏移：${formatUsd(nextBalance.offset_used_usd, 2)}`
+        : "";
+
+      pillEl.title =
+        `账期：${nextBalance.billing_month} (${nextBalance.timezone || "UTC"})\n` +
+        `本月已用：${used} / ${budget}（共 ${nextBalance.request_count || 0} 次）${offsetLine}\n` +
+        `预警阈值：${warnThreshold} · 禁用阈值：${disableThreshold}\n` +
+        `下次重置：${resetLabel}\n` +
+        `说明：基于官方单价的本地实时估算`;
+
+      if (nextBalance.disabled || nextBalance.status === "disabled") {
+        pillEl.className = "pill balance-pill err";
+        pillEl.innerHTML = `<span class="dot"></span>余额不足 ${remaining}（已禁用）`;
+        bannerTextEl.innerHTML =
+          `<strong>生图功能已暂停：</strong>${escapeHtml(nextBalance.disabled_reason || `当前估算余额 ${remaining} 已触及禁用阈值 ${disableThreshold}。`)}` +
+          `<span>历史记录浏览与图片 / ZIP 下载仍可正常使用。</span>`;
+        bannerEl.classList.add("show");
+      } else if (nextBalance.status === "warn") {
+        pillEl.className = "pill balance-pill warn";
+        pillEl.innerHTML = `<span class="dot"></span>余额 ${remaining} / ${budget}`;
+        bannerEl.classList.remove("show");
+      } else {
+        pillEl.className = "pill balance-pill ok";
+        pillEl.innerHTML = `<span class="dot"></span>余额 ${remaining} / ${budget}`;
+        bannerEl.classList.remove("show");
+      }
+      renderQueue();
+    }
+
+    async function refreshBalance() {
+      try {
+        const response = await fetch("/api/balance");
+        if (!response.ok) return;
+        const data = await response.json();
+        updateBalanceUI(data, { authoritative: true });
+      } catch {
+        // Keep existing UI state if refresh fails transiently
+      }
+    }
 
     function showToast(message) {
       const toastEl = document.getElementById("toast");
@@ -1085,6 +1240,9 @@
           statusEl.className = "pill err";
           statusEl.innerHTML = `<span class="dot"></span>未检测到 API_KEY`;
         }
+        if (config.balance) {
+          updateBalanceUI(config.balance, { authoritative: true });
+        }
         if (builtInPresets.length > 0) {
           selectPreset(builtInPresets[0].id);
         }
@@ -1092,6 +1250,9 @@
         const statusEl = document.getElementById("gatewayStatus");
         statusEl.className = "pill err";
         statusEl.innerHTML = `<span class="dot"></span>后端连接失败`;
+        const balanceEl = document.getElementById("balanceStatus");
+        balanceEl.className = "pill balance-pill err";
+        balanceEl.innerHTML = `<span class="dot"></span>余额读取失败`;
       }
     }
 
@@ -1151,12 +1312,22 @@
       const percent = total ? Math.round(((doneCount + errorCount) / total) * 100) : 0;
       document.getElementById("progressBar").style.width = `${percent}%`;
 
+      const generationDisabled = isGenerationDisabled();
       document.getElementById("zipBtn").disabled = doneCount === 0;
-      document.getElementById("retryFailedBtn").style.display = errorCount > 0 && !isBatchRunning ? "inline-flex" : "none";
+      const retryFailedBtn = document.getElementById("retryFailedBtn");
+      retryFailedBtn.style.display = errorCount > 0 && !isBatchRunning ? "inline-flex" : "none";
+      retryFailedBtn.disabled = generationDisabled;
 
       if (isBatchRunning) {
         runBtn.textContent = stopRequested ? "正在停止..." : `停止剩余任务 (${doneCount}/${total})`;
         runBtn.className = "btn btn-danger btn-block";
+        runBtn.disabled = false;
+      } else if (generationDisabled) {
+        runBtn.className = "btn btn-primary btn-block";
+        runBtn.disabled = true;
+        runBtn.textContent = balanceState && !balanceState.configured
+          ? "未检测到 API_KEY"
+          : "余额不足，已禁用生图";
       } else {
         const runnable = pendingCount + errorCount;
         runBtn.className = "btn btn-primary btn-block";
@@ -1194,10 +1365,13 @@
           const pre = item.result.preprocess || {};
           const actionsText = (pre.actions || []).join(" · ");
           const usage = item.result.usage || {};
+          const costPart = item.result.cost_usd !== undefined
+            ? ` · 约 ${formatUsd(item.result.cost_usd, 3)}`
+            : "";
           metaHtml =
             `<div>预处理：${pre.orig_size || "-"} → ${pre.processed_size || "-"}（${actionsText}）</div>` +
             `<div>输出：${item.result.output_size} · ${item.result.size_kb} KB · 耗时 ${item.result.elapsed}s` +
-            (usage.total_tokens ? ` · ${usage.total_tokens} tokens` : "") + `</div>`;
+            (usage.total_tokens ? ` · ${usage.total_tokens} tokens` : "") + `${costPart}</div>`;
         } else if (item.error) {
           metaHtml = `<div class="error-msg">${escapeHtml(item.error)}</div>`;
         } else {
@@ -1222,7 +1396,7 @@
           <div class="item-footer">
             <div style="display:flex; gap:6px;">
               ${item.result ? `<button class="btn btn-sm" onclick="openCompareModal('${item.uid}')">滑块对比</button>` : ""}
-              <button class="btn btn-sm" onclick="runSingleItem('${item.uid}')" ${item.status === "running" ? "disabled" : ""}>${item.result ? "重生成" : "单张生成"}</button>
+              <button class="btn btn-sm" onclick="runSingleItem('${item.uid}')" ${(item.status === "running" || generationDisabled) ? "disabled" : ""}>${item.result ? "重生成" : "单张生成"}</button>
             </div>
             <div style="display:flex; gap:6px;">
               ${item.result ? `<a class="btn btn-sm btn-primary" href="${item.result.url}" download="${escapeHtml(item.result.filename)}">下载</a>` : ""}
@@ -1283,8 +1457,22 @@
           method: "POST",
           body: buildFormData(item.file),
         });
-        const data = await response.json();
+        let data = {};
+        try {
+          data = await response.json();
+        } catch {
+          data = {};
+        }
+        if (data && data.balance) {
+          updateBalanceUI(data.balance);
+          if (data.balance.disabled && isBatchRunning) {
+            stopRequested = true;
+          }
+        }
         if (!response.ok) {
+          if (response.status === 402 && isBatchRunning) {
+            stopRequested = true;
+          }
           throw new Error(data.detail || `请求失败 (${response.status})`);
         }
         item.status = "done";
@@ -1297,6 +1485,7 @@
     }
 
     async function runSingleItem(uid) {
+      if (!guardGenerationAllowed()) return;
       const promptText = document.getElementById("promptInput").value.trim();
       if (!promptText) {
         showToast("Prompt 不能为空");
@@ -1314,6 +1503,7 @@
         showToast("将在当前请求完成后停止队列");
         return;
       }
+      if (!guardGenerationAllowed()) return;
       const promptText = document.getElementById("promptInput").value.trim();
       if (!promptText) {
         showToast("请先输入 Prompt");
@@ -1337,7 +1527,7 @@
       let cursor = 0;
 
       async function worker() {
-        while (!stopRequested) {
+        while (!stopRequested && !isGenerationDisabled()) {
           const currentIndex = cursor++;
           if (currentIndex >= targets.length) break;
           await processOneItem(targets[currentIndex]);
@@ -1347,14 +1537,16 @@
       const workers = Array.from({ length: Math.min(concurrency, targets.length) }, () => worker());
       await Promise.all(workers);
 
+      await refreshBalance();
+      const stoppedForBalance = isGenerationDisabled();
       isBatchRunning = false;
       stopRequested = false;
       renderQueue();
-      showToast("批量处理结束");
+      showToast(stoppedForBalance ? "余额已触及禁用阈值，已停止剩余任务" : "批量处理结束");
     }
 
     function retryFailedItems() {
-      if (isBatchRunning) return;
+      if (isBatchRunning || isGenerationDisabled()) return;
       for (const item of queueItems) {
         if (item.status === "error") item.status = "pending";
       }
@@ -1439,6 +1631,7 @@
         for (const item of historyItems) {
           const card = document.createElement("div");
           card.className = "item-card";
+          const costLabel = item.cost_usd !== undefined ? ` · 约 ${formatUsd(item.cost_usd, 3)}` : "";
           card.innerHTML = `
             <div class="item-header">
               <span class="item-title" title="${escapeHtml(item.orig_name)}">${escapeHtml(item.orig_name)}</span>
@@ -1448,7 +1641,7 @@
               <img src="${item.url}" alt="成品" />
             </div>
             <div class="item-meta">
-              <div>${item.model} (${item.quality}) · ${item.size_kb} KB · ${item.elapsed}s</div>
+              <div>${item.model} (${item.quality}) · ${item.size_kb} KB · ${item.elapsed}s${costLabel}</div>
               <div>${(item.preprocess && item.preprocess.actions || []).join(" · ")}</div>
             </div>
             <div class="item-footer">

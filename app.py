@@ -1,7 +1,9 @@
 import base64
+import binascii
 import io
 import json
 import os
+import secrets
 import time
 import uuid
 import zipfile
@@ -10,17 +12,30 @@ from typing import Any
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import (
+    FileResponse,
+    JSONResponse,
+    PlainTextResponse,
+    StreamingResponse,
+)
 from fastapi.staticfiles import StaticFiles
 from PIL import Image, ImageEnhance, ImageOps
 from pydantic import BaseModel
+
+from balance import (
+    BalanceLedger,
+    calculate_generation_cost,
+    compute_key_fingerprint,
+    resolve_record_cost,
+)
 
 APP_DIR = Path(__file__).resolve().parent
 ROOT_DIR = APP_DIR.parent
 STATIC_DIR = APP_DIR / "static"
 OUTPUT_DIR = APP_DIR / "outputs"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+balance_ledger = BalanceLedger(OUTPUT_DIR)
 
 load_dotenv(ROOT_DIR / ".env")
 load_dotenv(APP_DIR / ".env", override=True)
@@ -108,6 +123,46 @@ MODELS = [
 
 app = FastAPI(title="速卖通白底主图批量工作室")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+def get_access_key() -> str:
+    return (os.getenv("ACCESS_KEY") or "").strip()
+
+
+def verify_basic_auth(auth_header: str | None, expected_key: str) -> bool:
+    if not auth_header:
+        return False
+    scheme, _, encoded = auth_header.partition(" ")
+    if scheme.lower() != "basic" or not encoded.strip():
+        return False
+    try:
+        decoded = base64.b64decode(encoded.strip(), validate=True).decode("utf-8")
+    except (binascii.Error, ValueError, UnicodeDecodeError):
+        return False
+    username, separator, password = decoded.partition(":")
+    if not separator:
+        return False
+    expected_bytes = expected_key.encode("utf-8")
+    username_matches = secrets.compare_digest(username.encode("utf-8"), expected_bytes)
+    password_matches = secrets.compare_digest(password.encode("utf-8"), expected_bytes)
+    return bool(username_matches & password_matches)
+
+
+@app.middleware("http")
+async def basic_auth_middleware(request: Request, call_next):
+    expected_key = get_access_key()
+    if not expected_key:
+        return PlainTextResponse(
+            "ACCESS_KEY is not configured.",
+            status_code=503,
+        )
+    if not verify_basic_auth(request.headers.get("Authorization"), expected_key):
+        return PlainTextResponse(
+            "Unauthorized",
+            status_code=401,
+            headers={"WWW-Authenticate": 'Basic realm="Product Studio", charset="UTF-8"'},
+        )
+    return await call_next(request)
 
 
 def get_api_config() -> tuple[str, str]:
@@ -210,6 +265,7 @@ async def index() -> FileResponse:
 @app.get("/api/config")
 async def get_config() -> JSONResponse:
     api_key, base_url = get_api_config()
+    balance = balance_ledger.get_status(api_key)
     return JSONResponse(
         {
             "api_configured": bool(api_key),
@@ -218,8 +274,15 @@ async def get_config() -> JSONResponse:
             "default_quality": "medium",
             "models": MODELS,
             "presets": PRESETS,
+            "balance": balance,
         }
     )
+
+
+@app.get("/api/balance")
+async def get_balance() -> JSONResponse:
+    api_key, _ = get_api_config()
+    return JSONResponse(balance_ledger.get_status(api_key))
 
 
 @app.post("/api/generate")
@@ -239,6 +302,17 @@ async def generate_image(
     if not api_key:
         raise HTTPException(
             status_code=500, detail="未在 .env 中检测到 API_KEY 或 OPENAI_API_KEY"
+        )
+
+    current_balance = balance_ledger.get_status(api_key)
+    if current_balance["disabled"]:
+        return JSONResponse(
+            status_code=402,
+            content={
+                "code": "BALANCE_BELOW_THRESHOLD",
+                "detail": current_balance["disabled_reason"],
+                "balance": current_balance,
+            },
         )
 
     raw_upload = await file.read()
@@ -321,6 +395,9 @@ async def generate_image(
 
     elapsed = round(time.time() - started_at, 2)
     usage = payload.get("usage") or {}
+    cost_usd, cost_source = calculate_generation_cost(model, usage)
+    created_at = int(time.time())
+    key_fingerprint = compute_key_fingerprint(api_key)
 
     meta = {
         "id": item_id,
@@ -334,14 +411,25 @@ async def generate_image(
         "quality": quality,
         "elapsed": elapsed,
         "usage": usage,
+        "cost_usd": cost_usd,
+        "cost_source": cost_source,
+        "key_fingerprint": key_fingerprint,
         "preprocess": preprocess_report,
-        "created_at": int(time.time()),
+        "created_at": created_at,
     }
     (OUTPUT_DIR / f"{item_id}.json").write_text(
         json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
     )
 
-    return JSONResponse(meta)
+    updated_balance = balance_ledger.record_charge(
+        api_key,
+        item_id=item_id,
+        model=model,
+        cost_usd=cost_usd,
+        cost_source=cost_source,
+        created_at=created_at,
+    )
+    return JSONResponse({**meta, "balance": updated_balance})
 
 
 @app.get("/api/outputs/{filename}")
@@ -361,6 +449,10 @@ async def list_history(limit: int = 40) -> JSONResponse:
             record = json.loads(meta_file.read_text(encoding="utf-8"))
             img_path = OUTPUT_DIR / Path(record.get("filename", "")).name
             if img_path.exists():
+                if "cost_usd" not in record:
+                    cost_usd, cost_source = resolve_record_cost(record)
+                    record["cost_usd"] = cost_usd
+                    record["cost_source"] = cost_source
                 records.append(record)
         except Exception:
             continue
