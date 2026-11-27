@@ -4,1018 +4,176 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>速卖通白底主图 · 批量工作室</title>
+  <link rel="stylesheet" href="/static/studio.css" />
   <style>
-    :root {
-      --bg: #f6f7f9;
-      --surface: #ffffff;
-      --surface-muted: #f9fafb;
-      --border: #e5e7eb;
-      --border-strong: #d1d5db;
-      --text: #111827;
-      --text-2: #4b5563;
-      --text-3: #6b7280;
-      --accent: #2563eb;
-      --accent-hover: #1d4ed8;
-      --accent-soft: #eff6ff;
-      --success: #059669;
-      --success-soft: #ecfdf5;
-      --warn: #d97706;
-      --warn-soft: #fffbeb;
-      --danger: #dc2626;
-      --danger-soft: #fef2f2;
-      --radius: 12px;
-      --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
-      --shadow-md: 0 6px 20px rgba(15, 23, 42, 0.08);
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.5;
-    }
-
-    header {
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      background: rgba(255, 255, 255, 0.92);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid var(--border);
-      padding: 12px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .brand-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, #2563eb, #4f46e5);
-      color: #fff;
-      display: grid;
-      place-items: center;
-      font-weight: 700;
-      font-size: 16px;
-      box-shadow: 0 3px 10px rgba(37, 99, 235, 0.25);
-    }
-
-    .brand h1 {
-      margin: 0;
-      font-size: 16px;
-      font-weight: 700;
-    }
-
-    .brand p {
-      margin: 0;
-      font-size: 12px;
-      color: var(--text-3);
-    }
-
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 5px 11px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 500;
-      background: var(--surface-muted);
-      border: 1px solid var(--border);
-      color: var(--text-2);
-    }
-
-    .pill.ok {
-      background: var(--success-soft);
-      border-color: #a7f3d0;
-      color: var(--success);
-    }
-
-    .pill.warn {
-      background: var(--warn-soft);
-      border-color: #fde68a;
-      color: var(--warn);
-    }
-
-    .pill.err {
-      background: var(--danger-soft);
-      border-color: #fecaca;
-      color: var(--danger);
-    }
-
-    .balance-pill {
-      cursor: help;
-    }
-
-    .settings-btn {
-      position: relative;
-    }
-
-    .settings-btn.has-custom {
-      border-color: #bfdbfe;
-      background: var(--accent-soft);
-      color: var(--accent);
-    }
-
-    .dirty-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--accent);
-      display: inline-block;
-    }
-
-    .dirty-dot[hidden],
-    .pill[hidden],
-    .modified-badge[hidden] {
-      display: none !important;
-    }
-
-    .balance-banner {
-      display: none;
-      max-width: 1240px;
-      margin: 14px auto 0;
-      padding: 10px 24px 0;
-    }
-
-    .balance-banner.show {
-      display: block;
-    }
-
-    .balance-banner-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-      padding: 11px 14px;
-      border-radius: var(--radius);
-      background: var(--danger-soft);
-      border: 1px solid #fecaca;
-      color: #991b1b;
-      font-size: 13px;
-    }
-
-    .dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: currentColor;
-    }
-
-    main {
-      max-width: 1240px;
-      margin: 0 auto;
-      padding: 18px 24px 56px;
-    }
-
-    .panel {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .prompt-panel {
-      padding: 16px 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .preset-header {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .preset-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .preset-active-desc {
-      font-size: 12px;
-      color: var(--text-3);
-    }
-
-    .preset-pills {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .preset-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      border-radius: 999px;
-      border: 1px solid var(--border-strong);
-      background: var(--surface);
-      color: var(--text-2);
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-
-    .preset-pill:hover {
-      border-color: var(--accent);
-      color: var(--text);
-      background: var(--surface-muted);
-    }
-
-    .preset-pill.active {
-      border-color: var(--accent);
-      background: var(--accent-soft);
-      color: var(--accent);
-      font-weight: 600;
-      box-shadow: 0 0 0 1px var(--accent) inset;
-    }
-
-    .section-title {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 8px;
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .section-title small {
-      font-weight: 400;
-      color: var(--text-3);
-      font-size: 11px;
-    }
-
-    .preset-del {
-      border: none;
-      background: transparent;
-      color: var(--text-3);
-      cursor: pointer;
-      font-size: 14px;
-      line-height: 1;
-      padding: 0 2px;
-    }
-
-    .preset-del:hover { color: var(--danger); }
-
-    .prompt-editor-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 6px;
-    }
-
-    .prompt-editor-label {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-2);
-    }
-
-    .modified-badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 1px 7px;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 600;
-      background: var(--warn-soft);
-      border: 1px solid #fde68a;
-      color: var(--warn);
-    }
-
-    .prompt-editor-tools {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .prompt-char-count {
-      font-size: 11px;
-      color: var(--text-3);
-    }
-
-    textarea, select, input[type="text"] {
-      width: 100%;
-      font-family: inherit;
-      font-size: 13px;
-      color: var(--text);
-      background: var(--surface);
-      border: 1px solid var(--border-strong);
-      border-radius: 8px;
-      padding: 9px 10px;
-      outline: none;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease;
-    }
-
-    textarea:focus, select:focus, input[type="text"]:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-    }
-
-    textarea {
-      min-height: 72px;
-      resize: vertical;
-      line-height: 1.5;
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .field label {
-      display: block;
-      font-size: 12px;
-      color: var(--text-2);
-      margin-bottom: 4px;
-      font-weight: 500;
-    }
-
-    .preprocess-box {
-      background: var(--surface-muted);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .check-row {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      font-size: 12px;
-      color: var(--text-2);
-      cursor: pointer;
-    }
-
-    .check-row input {
-      margin-top: 2px;
-      accent-color: var(--accent);
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      border-radius: 9px;
-      border: 1px solid var(--border-strong);
-      background: var(--surface);
-      color: var(--text);
-      font-size: 13px;
-      font-weight: 600;
-      padding: 8px 14px;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      white-space: nowrap;
-      text-decoration: none;
-    }
-
-    .btn:hover:not(:disabled) {
-      background: var(--surface-muted);
-    }
-
-    .btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .btn-primary {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
-    }
-
-    .btn-primary:hover:not(:disabled) {
-      background: var(--accent-hover);
-      border-color: var(--accent-hover);
-    }
-
-    .btn-danger {
-      background: var(--danger-soft);
-      border-color: #fecaca;
-      color: var(--danger);
-    }
-
-    .btn-danger:hover:not(:disabled) {
-      background: #fee2e2;
-    }
-
-    .btn-subtle-danger {
-      background: transparent;
-      border-color: var(--border);
-      color: var(--text-2);
-    }
-
-    .btn-subtle-danger:hover:not(:disabled) {
-      background: var(--danger-soft);
-      border-color: #fecaca;
-      color: var(--danger);
-    }
-
-    .btn-sm {
-      padding: 5px 10px;
-      font-size: 12px;
-      border-radius: 7px;
-    }
-
-    .btn-block {
-      width: 100%;
-      padding: 11px 16px;
-      font-size: 14px;
-    }
-
-    .workspace {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      min-width: 0;
-    }
-
-    .dropzone {
-      border: 2px dashed var(--border-strong);
-      border-radius: var(--radius);
-      background: var(--surface);
-      padding: 36px 20px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.18s ease;
-    }
-
-    .dropzone.compact {
-      padding: 14px 18px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      text-align: left;
-      gap: 12px;
-    }
-
-    .dropzone.dragover {
-      border-color: var(--accent);
-      background: var(--accent-soft);
-    }
-
-    .dropzone-title {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text);
-    }
-
-    .dropzone-sub {
-      font-size: 12px;
-      color: var(--text-3);
-      margin-top: 4px;
-    }
-
-    .toolbar {
-      position: sticky;
-      top: 72px;
-      z-index: 15;
-      padding: 14px 18px;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      background: rgba(255, 255, 255, 0.96);
-      backdrop-filter: blur(8px);
-      box-shadow: var(--shadow-md);
-    }
-
-    .stats {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      flex-wrap: wrap;
-      font-size: 13px;
-      color: var(--text-2);
-    }
-
-    .stats strong { color: var(--text); }
-
-    .progress-wrap {
-      width: 100%;
-      height: 6px;
-      background: #e5e7eb;
-      border-radius: 999px;
-      overflow: hidden;
-    }
-
-    .progress-bar {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, #2563eb, #10b981);
-      transition: width 0.25s ease;
-    }
-
-    .toolbar-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .card-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-      gap: 16px;
-    }
-
-    .item-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      box-shadow: var(--shadow-sm);
-      display: flex;
-      flex-direction: column;
-    }
-
-    .item-header {
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .item-title {
-      font-size: 13px;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 220px;
-    }
-
-    .badge {
-      font-size: 11px;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 999px;
-      white-space: nowrap;
-    }
-
-    .badge-pending { background: #f3f4f6; color: #4b5563; }
-    .badge-running { background: var(--accent-soft); color: var(--accent); }
-    .badge-done { background: var(--success-soft); color: var(--success); }
-    .badge-error { background: var(--danger-soft); color: var(--danger); }
-
-    .compare-pair {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1px;
-      background: var(--border);
-    }
-
-    .img-pane {
-      position: relative;
-      aspect-ratio: 1 / 1;
-      background: repeating-conic-gradient(#f3f4f6 0% 25%, #ffffff 0% 50%) 50% / 16px 16px;
-      display: grid;
-      place-items: center;
-      overflow: hidden;
-    }
-
-    .img-pane.result-pane {
-      background: #ffffff;
-      cursor: zoom-in;
-    }
-
-    .img-pane img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      display: block;
-    }
-
-    .pane-label {
-      position: absolute;
-      top: 8px;
-      left: 8px;
-      font-size: 11px;
-      font-weight: 600;
-      padding: 2px 7px;
-      border-radius: 6px;
-      background: rgba(17, 24, 39, 0.72);
-      color: #fff;
-    }
-
-    .placeholder-state {
-      padding: 16px;
-      text-align: center;
-      color: var(--text-3);
-      font-size: 12px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .spinner {
-      width: 26px;
-      height: 26px;
-      border: 3px solid #dbeafe;
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .item-meta {
-      padding: 10px 14px;
-      font-size: 12px;
-      color: var(--text-3);
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      background: var(--surface-muted);
-      border-top: 1px solid var(--border);
-      flex: 1;
-    }
-
-    .error-msg {
-      color: var(--danger);
-      font-size: 12px;
-      word-break: break-word;
-    }
-
-    .item-footer {
-      padding: 10px 14px;
-      border-top: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .empty-history {
-      padding: 40px;
-      text-align: center;
-      color: var(--text-3);
-      font-size: 13px;
-    }
-
-    .tabs {
-      display: inline-flex;
-      background: #eef0f4;
-      border-radius: 9px;
-      padding: 3px;
-      gap: 3px;
-    }
-
-    .tab-btn {
-      border: none;
-      background: transparent;
-      padding: 5px 12px;
-      border-radius: 7px;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-2);
-      cursor: pointer;
-    }
-
-    .tab-btn.active {
-      background: var(--surface);
-      color: var(--text);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.65);
-      backdrop-filter: blur(4px);
-      z-index: 100;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    .modal-backdrop.open { display: flex; }
-
-    .drawer-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.45);
-      backdrop-filter: blur(2px);
-      z-index: 90;
-      display: flex;
-      justify-content: flex-end;
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-      transition: opacity 0.2s ease, visibility 0.2s ease;
-    }
-
-    .drawer-backdrop.open {
-      opacity: 1;
-      visibility: visible;
-      pointer-events: auto;
-    }
-
-    .drawer-panel {
-      width: 100%;
-      max-width: 400px;
-      height: 100%;
-      background: var(--surface);
-      box-shadow: -8px 0 30px rgba(15, 23, 42, 0.16);
-      display: flex;
-      flex-direction: column;
-      transform: translateX(100%);
-      transition: transform 0.22s ease;
-    }
-
-    .drawer-backdrop.open .drawer-panel {
-      transform: translateX(0);
-    }
-
-    .drawer-head {
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .drawer-head h2 {
-      margin: 0;
-      font-size: 15px;
-      font-weight: 700;
-    }
-
-    .drawer-body {
-      padding: 18px 20px;
-      overflow-y: auto;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    .drawer-note {
-      margin: 0;
-      font-size: 12px;
-      color: var(--text-3);
-      background: var(--surface-muted);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 9px 11px;
-    }
-
-    .drawer-foot {
-      padding: 14px 20px;
-      border-top: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .modal-box {
-      background: var(--surface);
-      border-radius: 14px;
-      max-width: 920px;
-      width: 100%;
-      max-height: 92vh;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      box-shadow: var(--shadow-md);
-    }
-
-    .modal-head {
-      padding: 14px 18px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .modal-body {
-      padding: 18px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    .slider-stage {
-      position: relative;
-      width: 100%;
-      max-width: 640px;
-      aspect-ratio: 1 / 1;
-      margin: 0 auto;
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      overflow: hidden;
-      user-select: none;
-    }
-
-    .slider-stage img {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      pointer-events: none;
-    }
-
-    .slider-after-wrap {
-      position: absolute;
-      inset: 0;
-      overflow: hidden;
-      background: #fff;
-    }
-
-    .slider-divider {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 2px;
-      background: var(--accent);
-      left: 50%;
-      pointer-events: none;
-    }
-
-    .slider-handle {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      background: var(--accent);
-      color: #fff;
-      display: grid;
-      place-items: center;
-      font-size: 13px;
-      font-weight: 700;
-      box-shadow: 0 2px 10px rgba(37, 99, 235, 0.4);
-      pointer-events: none;
-    }
-
-    .slider-range {
-      width: 100%;
-      max-width: 640px;
-      margin: 0 auto;
-      display: block;
-      accent-color: var(--accent);
-    }
-
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: #111827;
-      color: #fff;
-      padding: 10px 16px;
-      border-radius: 10px;
-      font-size: 13px;
-      box-shadow: var(--shadow-md);
-      opacity: 0;
-      transform: translateY(10px);
-      transition: all 0.2s ease;
-      pointer-events: none;
-      z-index: 200;
-    }
-
-    .toast.show {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    .toolbar { position: sticky; }
   </style>
 </head>
-<body>
-  <header>
+<body data-inspect-bg="white" data-safe-frame="off">
+  <header id="studioHeader">
     <div class="brand">
-      <div class="brand-icon">白</div>
-      <div>
+      <div class="brand-icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 8V5a1 1 0 0 1 1-1h3" />
+          <path d="M20 8V5a1 1 0 0 0-1-1h-3" />
+          <path d="M4 16v3a1 1 0 0 0 1 1h3" />
+          <path d="M20 16v3a1 1 0 0 1-1 1h-3" />
+          <rect x="8" y="8" width="8" height="8" rx="1.5" fill="#fafafa" stroke="none" />
+        </svg>
+      </div>
+      <div class="brand-copy">
         <h1>速卖通白底主图 · 批量工作室</h1>
-        <p>一键批量生成标准白底主图，保留商品细节与文字</p>
+        <p>棚拍级纯白底批量出图与质检工作台，保留商品细节与印刷文字</p>
       </div>
     </div>
     <div class="header-right">
-      <div class="tabs">
-        <button class="tab-btn active" id="tabBatch" onclick="switchTab('batch')">批量工作台</button>
-        <button class="tab-btn" id="tabHistory" onclick="switchTab('history')">历史生成</button>
+      <div class="tabs" role="tablist" aria-label="工作区视图">
+        <button class="tab-btn active" id="tabBatch" type="button" role="tab" aria-selected="true" aria-controls="batchView" onclick="switchTab('batch')">批量工作台</button>
+        <button class="tab-btn" id="tabHistory" type="button" role="tab" aria-selected="false" aria-controls="historyView" onclick="switchTab('history')">历史生成</button>
       </div>
-      <span class="pill balance-pill" id="balanceStatus" title="正在读取余额..."><span class="dot"></span>余额读取中...</span>
-      <span class="pill err" id="gatewayStatus" hidden><span class="dot"></span>服务异常</span>
-      <button class="btn btn-sm settings-btn" id="advancedSettingsBtn" type="button" onclick="openAdvancedDrawer()">
-        ⚙ 高级设置
+      <div class="balance-wrap">
+        <button class="pill balance-pill" id="balanceStatus" type="button" aria-expanded="false" aria-controls="balancePopover" onclick="toggleBalancePopover()">
+          <span class="dot" aria-hidden="true"></span>
+          <span id="balanceStatusText">余额读取中...</span>
+        </button>
+        <div class="balance-popover" id="balancePopover" role="region" aria-label="本月预算与余额详情" hidden>
+          <h2>本月预算与估算</h2>
+          <dl class="balance-kv" id="balancePopoverList"></dl>
+          <p class="balance-popover-note">基于官方单价实时估算，实际账单以上游控制台为准。</p>
+        </div>
+      </div>
+      <span class="pill err" id="gatewayStatus" hidden role="status"><span class="dot" aria-hidden="true"></span>服务异常</span>
+      <button class="btn btn-sm settings-btn" id="advancedSettingsBtn" type="button" aria-haspopup="dialog" aria-controls="advancedDrawer" onclick="openAdvancedDrawer()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="4" y1="6" x2="20" y2="6" />
+          <circle cx="9" cy="6" r="2" fill="currentColor" />
+          <line x1="4" y1="12" x2="20" y2="12" />
+          <circle cx="15" cy="12" r="2" fill="currentColor" />
+          <line x1="4" y1="18" x2="20" y2="18" />
+          <circle cx="11" cy="18" r="2" fill="currentColor" />
+        </svg>
+        <span>高级设置</span>
         <span class="dirty-dot" id="advancedDirtyDot" hidden title="已修改默认参数"></span>
       </button>
     </div>
   </header>
 
-  <div class="balance-banner" id="balanceBanner">
+  <div class="system-banner-wrap" id="initErrorBanner" hidden role="alert">
+    <div class="system-banner-inner">
+      <span id="initErrorText">后端服务连接失败，无法加载预设与预算信息。</span>
+      <button class="btn btn-sm btn-danger" type="button" onclick="initApp()">重新连接</button>
+    </div>
+  </div>
+
+  <div class="balance-banner" id="balanceBanner" role="alert">
     <div class="balance-banner-inner" id="balanceBannerText"></div>
   </div>
 
   <main>
-    <section class="workspace" id="batchView">
+    <section class="workspace" id="batchView" role="tabpanel" aria-labelledby="tabBatch">
       <div class="panel prompt-panel">
-        <div class="preset-header">
-          <span class="preset-title">出图场景</span>
-          <span class="preset-active-desc" id="activePresetDesc">选择场景后自动填入提示词，特殊商品可直接修改</span>
+        <div class="deck-head">
+          <h2 class="preset-title">出图场景与提示词</h2>
+          <span class="preset-active-desc" id="activePresetDesc">选择场景即填入对应提示词，可随时在下方直接修改</span>
         </div>
-        <div class="preset-pills" id="presetGrid"></div>
-        <div>
+        <div class="preset-grid" id="presetGrid" role="group" aria-label="出图场景预设"></div>
+        <div class="prompt-editor-shell">
           <div class="prompt-editor-head">
             <label class="prompt-editor-label" for="promptInput">
-              <span>生成提示词（可直接修改或自己写）</span>
+              <span>生成提示词</span>
+              <span class="prompt-editor-hint">可按特殊商品直接微调或重写</span>
               <span class="modified-badge" id="promptModifiedBadge" hidden>已修改</span>
             </label>
             <div class="prompt-editor-tools">
               <span class="prompt-char-count" id="promptCharCount">0 字符</span>
+              <button class="btn btn-sm btn-ghost" id="togglePromptSizeBtn" type="button" onclick="togglePromptSize()" aria-expanded="false">展开编辑区</button>
               <button class="btn btn-sm" id="resetPromptBtn" type="button" onclick="resetPromptToPreset()" disabled>恢复默认</button>
-              <button class="btn btn-sm" id="savePresetBtn" type="button" onclick="saveCustomPreset()">+ 存为我的模板</button>
+              <button class="btn btn-sm" id="savePresetBtn" type="button" onclick="saveCustomPreset()">+ 存为模板</button>
             </div>
           </div>
-          <textarea id="promptInput" rows="3" placeholder="可直接使用所选场景的提示词，也可以清空后自己输入特殊要求..."></textarea>
+          <textarea id="promptInput" rows="4" placeholder="选择上方场景即可自动填充，也可以直接补充对角度、光影、保留文字的具体要求..."></textarea>
         </div>
       </div>
 
-      <div class="dropzone" id="dropzone">
-        <div>
-          <div class="dropzone-title">拖拽多张商品图 / 截图到这里，或点击选择图片</div>
-          <div class="dropzone-sub">支持 JPG / PNG / WEBP 批量导入 · 也支持直接按 <strong>Ctrl + V</strong> 粘贴剪贴板截图</div>
-        </div>
-        <button class="btn btn-sm" type="button" id="pickBtn" style="display:none;">+ 继续添加图片</button>
-        <input type="file" id="fileInput" accept="image/*" multiple hidden />
-      </div>
-
-      <div class="panel toolbar" id="toolbar" style="display:none;">
-        <div style="flex:1; min-width: 240px;">
-          <div class="stats" id="statsText"></div>
-          <div class="progress-wrap" style="margin-top:8px;">
-            <div class="progress-bar" id="progressBar"></div>
+      <button type="button" class="dropzone" id="dropzone" aria-describedby="dropzoneSub">
+        <div class="dropzone-left">
+          <div class="dropzone-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+          </div>
+          <div class="dropzone-copy">
+            <span class="dropzone-title">拖拽多张商品图 / 截图到这里，或点击选择图片</span>
+            <span class="dropzone-sub" id="dropzoneSub">支持 JPG / PNG / WEBP 批量导入<span class="desktop-only-hint"> · 也可直接按 <strong>Ctrl + V</strong> 粘贴剪贴板截图</span></span>
           </div>
         </div>
-        <div class="toolbar-actions">
-          <button class="btn btn-primary" id="runBatchBtn" type="button" onclick="startOrStopBatch()">开始批量生成</button>
-          <button class="btn btn-sm" id="retryFailedBtn" type="button" onclick="retryFailedItems()" style="display:none;">重试失败项</button>
-          <button class="btn" id="zipBtn" type="button" onclick="downloadAllZip()" disabled>打包下载 ZIP</button>
-          <button class="btn btn-sm btn-subtle-danger" id="clearQueueBtn" type="button" onclick="clearQueue()">清空列表</button>
+        <span class="dropzone-cta-chip" id="pickBtn" aria-hidden="true">+ 继续添加图片</span>
+        <div class="dropzone-steps" aria-hidden="true">
+          <span class="dropzone-step"><span class="step-dot"></span>导入实拍图或手机长截图</span>
+          <span class="dropzone-step"><span class="step-dot"></span>并发生成纯白底主图</span>
+          <span class="dropzone-step"><span class="step-dot"></span>暗房底板质检并一键打包 ZIP</span>
+        </div>
+      </button>
+      <input type="file" id="fileInput" accept="image/*" multiple class="sr-only" tabindex="-1" />
+
+      <div class="panel toolbar" id="toolbar" style="display:none;">
+        <div class="toolbar-top">
+          <div class="toolbar-status">
+            <div class="stats" id="statsText" aria-live="polite"></div>
+            <div class="progress-wrap" aria-hidden="true">
+              <div class="progress-bar" id="progressBar"></div>
+            </div>
+          </div>
+          <div class="toolbar-actions">
+            <button class="btn btn-primary" id="runBatchBtn" type="button" onclick="startOrStopBatch()">开始批量生成</button>
+            <button class="btn btn-sm" id="retryFailedBtn" type="button" onclick="retryFailedItems()" style="display:none;">重试失败项</button>
+            <button class="btn" id="zipBtn" type="button" onclick="downloadAllZip()" disabled>打包下载 ZIP</button>
+            <button class="btn btn-sm btn-subtle-danger" id="clearQueueBtn" type="button" onclick="clearQueue()">清空列表</button>
+          </div>
+        </div>
+        <div class="inspect-bar" aria-label="棚拍白底质检视图设置">
+          <div class="inspect-group">
+            <span class="inspect-label">质检底板</span>
+            <div class="segmented" role="group" aria-label="切换成品检视背景">
+              <button type="button" class="seg-btn active" data-bg="white" onclick="setInspectBg('white')"><span class="swatch swatch-white" aria-hidden="true"></span>纯白</button>
+              <button type="button" class="seg-btn" data-bg="checker" onclick="setInspectBg('checker')"><span class="swatch swatch-checker" aria-hidden="true"></span>棋盘格</button>
+              <button type="button" class="seg-btn" data-bg="dark" onclick="setInspectBg('dark')"><span class="swatch swatch-dark" aria-hidden="true"></span>暗房深灰</button>
+            </div>
+          </div>
+          <div class="inspect-group">
+            <button type="button" class="safe-toggle" id="safeFrameToggle" aria-pressed="false" onclick="toggleSafeFrame()">80% 主图安全框</button>
+            <button type="button" class="param-summary-btn" id="paramSummaryBtn" onclick="openAdvancedDrawer()" title="点击修改模型与导出参数"></button>
+          </div>
         </div>
       </div>
 
       <div class="card-grid" id="cardGrid"></div>
     </section>
 
-    <section class="workspace" id="historyView" style="display:none;">
+    <section class="workspace" id="historyView" style="display:none;" role="tabpanel" aria-labelledby="tabHistory">
       <div class="panel toolbar">
-        <div class="stats">
-          <span>最近生成的白底成品图</span>
+        <div class="toolbar-top">
+          <div class="stats">
+            <span>最近生成的白底成品图</span>
+            <span class="estimate-pill" id="historyCountPill">最多显示最近 40 条</span>
+          </div>
+          <div class="toolbar-actions">
+            <button class="btn btn-sm" type="button" onclick="loadHistory()">刷新</button>
+            <button class="btn btn-sm btn-primary" id="historyZipBtn" type="button" onclick="downloadHistoryZip()">全部打包 ZIP</button>
+          </div>
         </div>
-        <div class="toolbar-actions">
-          <button class="btn btn-sm" onclick="loadHistory()">刷新</button>
-          <button class="btn btn-sm btn-primary" onclick="downloadHistoryZip()">全部打包 ZIP</button>
+        <div class="inspect-bar" aria-label="历史图质检底板">
+          <div class="inspect-group">
+            <span class="inspect-label">质检底板</span>
+            <div class="segmented" role="group" aria-label="切换历史图检视背景">
+              <button type="button" class="seg-btn active" data-bg="white" onclick="setInspectBg('white')"><span class="swatch swatch-white" aria-hidden="true"></span>纯白</button>
+              <button type="button" class="seg-btn" data-bg="checker" onclick="setInspectBg('checker')"><span class="swatch swatch-checker" aria-hidden="true"></span>棋盘格</button>
+              <button type="button" class="seg-btn" data-bg="dark" onclick="setInspectBg('dark')"><span class="swatch swatch-dark" aria-hidden="true"></span>暗房深灰</button>
+            </div>
+          </div>
+          <button type="button" class="safe-toggle" id="historySafeFrameToggle" aria-pressed="false" onclick="toggleSafeFrame()">80% 主图安全框</button>
         </div>
       </div>
       <div class="card-grid" id="historyGrid"></div>
@@ -1023,14 +181,13 @@
   </main>
 
   <div class="drawer-backdrop" id="advancedDrawerBackdrop" onclick="if (event.target === this) closeAdvancedDrawer()">
-    <aside class="drawer-panel" id="advancedDrawer" aria-label="高级设置">
+    <aside class="drawer-panel" id="advancedDrawer" role="dialog" aria-modal="true" aria-labelledby="advancedDrawerTitle" aria-label="高级设置">
       <div class="drawer-head">
-        <h2>高级设置</h2>
-        <button class="btn btn-sm" type="button" onclick="closeAdvancedDrawer()">关闭</button>
+        <h2 id="advancedDrawerTitle">高级设置</h2>
+        <button class="btn btn-sm" id="closeAdvancedBtn" type="button" onclick="closeAdvancedDrawer()">关闭</button>
       </div>
       <div class="drawer-body">
-        <p class="drawer-note">默认参数已针对速卖通白底主图调优，普通使用无需调整。</p>
-
+        <p class="drawer-note">默认参数已针对速卖通白底主图调优，修改后会自动保存在当前浏览器中。</p>
         <div>
           <div class="section-title"><span>模型与输出参数</span></div>
           <div class="form-grid">
@@ -1041,9 +198,9 @@
             <div class="field">
               <label for="qualitySelect">画质档位</label>
               <select id="qualitySelect">
-                <option value="low">low（快速省钱）</option>
-                <option value="medium" selected>medium（主力推荐）</option>
-                <option value="high">high（最高细节）</option>
+                <option value="low">low（快速省钱 · 约 $0.015/张）</option>
+                <option value="medium" selected>medium（主力推荐 · 约 $0.04/张）</option>
+                <option value="high">high（最高细节 · 约 $0.12/张）</option>
               </select>
             </div>
             <div class="field">
@@ -1073,9 +230,8 @@
             </div>
           </div>
         </div>
-
         <div>
-          <div class="section-title"><span>自动预处理（上传前优化）</span></div>
+          <div class="section-title"><span>自动输入优化（上传前生效）</span></div>
           <div class="preprocess-box">
             <label class="check-row">
               <input type="checkbox" id="optAutoCrop" checked />
@@ -1099,831 +255,84 @@
     </aside>
   </div>
 
-  <div class="modal-backdrop" id="compareModal" onclick="if (event.target === this) closeModal()">
+  <div class="modal-backdrop" id="compareModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" onclick="if (event.target === this) closeModal()">
     <div class="modal-box">
       <div class="modal-head">
-        <strong id="modalTitle">原图 / 白底成品 细节对比</strong>
-        <button class="btn btn-sm" onclick="closeModal()">关闭</button>
+        <h2 class="modal-head-title" id="modalTitle">原图 / 白底成品 细节对比</h2>
+        <div class="modal-head-actions">
+          <button class="btn btn-sm" id="modalPrevBtn" type="button" onclick="stepCompareModal(-1)" hidden>上一张</button>
+          <button class="btn btn-sm" id="modalNextBtn" type="button" onclick="stepCompareModal(1)" hidden>下一张</button>
+          <button class="btn btn-sm" id="closeModalBtn" type="button" onclick="closeModal()">关闭</button>
+        </div>
       </div>
       <div class="modal-body">
-        <div class="slider-stage" id="sliderStage">
-          <img id="modalOrigImg" alt="原图" />
-          <div class="slider-after-wrap" id="sliderAfterWrap" style="clip-path: inset(0 0 0 50%);">
-            <img id="modalResultImg" alt="生成图" />
+        <div class="modal-inspect-row">
+          <div class="inspect-group">
+            <span class="inspect-label">检视底板</span>
+            <div class="segmented" role="group" aria-label="弹窗内切换检视底板">
+              <button type="button" class="seg-btn active" data-bg="white" onclick="setInspectBg('white')"><span class="swatch swatch-white" aria-hidden="true"></span>纯白</button>
+              <button type="button" class="seg-btn" data-bg="checker" onclick="setInspectBg('checker')"><span class="swatch swatch-checker" aria-hidden="true"></span>棋盘格</button>
+              <button type="button" class="seg-btn" data-bg="dark" onclick="setInspectBg('dark')"><span class="swatch swatch-dark" aria-hidden="true"></span>暗房深灰</button>
+            </div>
           </div>
-          <div class="slider-divider" id="sliderDivider"></div>
-          <div class="slider-handle" id="sliderHandle">↔</div>
+          <button type="button" class="safe-toggle" id="modalSafeFrameToggle" aria-pressed="false" onclick="toggleSafeFrame()">80% 主图安全框</button>
         </div>
-        <input type="range" min="0" max="100" value="50" class="slider-range" id="compareSlider" oninput="updateSlider(this.value)" />
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-          <span id="modalMetaText" style="font-size:12px; color:var(--text-3);"></span>
+        <div class="modal-crop-note" id="modalCropNote" hidden>原图为长截图并已自动裁切主图区，叠加对比位置仅供参考。</div>
+        <div class="slider-stage" id="sliderStage" data-inspect-bg="white" data-safe-frame="off">
+          <img id="modalOrigImg" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="原图" />
+          <div class="slider-after-wrap" id="sliderAfterWrap" style="clip-path: inset(0 0 0 50%);">
+            <img id="modalResultImg" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="白底成品" />
+          </div>
+          <div class="safe-frame-guide" aria-hidden="true"></div>
+          <div class="slider-divider" id="sliderDivider"></div>
+          <div class="slider-handle" id="sliderHandle" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="8 6 3 12 8 18" />
+              <polyline points="16 6 21 12 16 18" />
+            </svg>
+          </div>
+        </div>
+        <input type="range" min="0" max="100" value="50" class="slider-range" id="compareSlider" aria-label="对比分割线位置" oninput="updateSlider(this.value)" />
+        <div class="modal-foot-row">
+          <span id="modalMetaText" class="tabular" style="font-size:12px; color:var(--text-3);"></span>
           <a id="modalDownloadLink" class="btn btn-sm btn-primary" download>下载当前成品图</a>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="toast" id="toast"></div>
+  <div class="modal-backdrop" id="appDialog" role="dialog" aria-modal="true" aria-labelledby="appDialogTitle" onclick="if (event.target === this) resolveAppDialog(null)">
+    <div class="modal-box dialog-box">
+      <div class="modal-head">
+        <h2 class="modal-head-title" id="appDialogTitle">确认操作</h2>
+        <button class="btn btn-sm" type="button" onclick="resolveAppDialog(null)">取消</button>
+      </div>
+      <div class="modal-body">
+        <p class="dialog-message" id="appDialogMessage"></p>
+        <div class="dialog-detail" id="appDialogDetail" hidden></div>
+        <div class="dialog-input-wrap" id="appDialogInputWrap" hidden>
+          <label for="appDialogInput" class="sr-only">输入内容</label>
+          <input type="text" id="appDialogInput" autocomplete="off" />
+        </div>
+      </div>
+      <div class="dialog-foot">
+        <button class="btn btn-sm" id="appDialogCancelBtn" type="button" onclick="resolveAppDialog(null)">取消</button>
+        <button class="btn btn-sm btn-primary" id="appDialogConfirmBtn" type="button" onclick="confirmAppDialog()">确认</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true">
+    <span id="toastText"></span>
+    <button type="button" class="toast-action" id="toastActionBtn" hidden></button>
+  </div>
 
   <script src="/static/ui_logic.js"></script>
+  <script src="/static/studio.js"></script>
   <script>
-    const CUSTOM_PRESETS_KEY = "product_studio_custom_presets_v1";
-    const UI = window.ProductStudioUI;
-
-    const BUTTON_VARIANT_CLASS = {
-      primary: "btn btn-primary",
-      danger: "btn btn-danger",
-      secondary: "btn",
-    };
-
-    const ADVANCED_FIELDS = [
-      { key: "model", id: "modelSelect", prop: "value" },
-      { key: "quality", id: "qualitySelect", prop: "value" },
-      { key: "concurrency", id: "concurrencySelect", prop: "value" },
-      { key: "exportSize", id: "exportSizeSelect", prop: "value" },
-      { key: "exportFormat", id: "exportFormatSelect", prop: "value" },
-      { key: "autoCrop", id: "optAutoCrop", prop: "checked" },
-      { key: "maxEdge", id: "optMaxEdge", prop: "checked" },
-      { key: "enhanceSmall", id: "optEnhanceSmall", prop: "checked" },
-    ];
-
-    const advancedDefaults = {
-      model: "gpt-image-2.5-sunburst",
-      quality: "medium",
-      concurrency: "2",
-      exportSize: "1000x1000",
-      exportFormat: "png",
-      autoCrop: true,
-      maxEdge: true,
-      enhanceSmall: true,
-    };
-
-    let builtInPresets = [];
-    let customPresets = [];
-    let activePresetId = "aliexpress_white";
-    let queueItems = [];
-    let historyItems = [];
-    let isBatchRunning = false;
-    let stopRequested = false;
-    let balanceState = null;
-
-    function formatUsd(amount, digits = 2) {
-      const num = Number(amount);
-      if (!Number.isFinite(num)) return "$0.00";
-      return `$${num.toFixed(digits)}`;
+    if (window.ProductStudioApp && typeof window.ProductStudioApp.boot === "function") {
+      window.ProductStudioApp.boot();
     }
-
-    function isGenerationDisabled() {
-      return Boolean(balanceState && balanceState.disabled);
-    }
-
-    function guardGenerationAllowed() {
-      if (!isGenerationDisabled()) return true;
-      showToast((balanceState && balanceState.disabled_reason) || "余额低于阈值，已禁用生图");
-      return false;
-    }
-
-    function formatResetTime(isoString, timezoneName) {
-      if (!isoString) return "-";
-      const parsed = new Date(isoString);
-      if (Number.isNaN(parsed.getTime())) return isoString;
-      const targetTz = timezoneName || "UTC";
-      try {
-        return `${parsed.toLocaleString(undefined, { timeZone: targetTz })} (${targetTz})`;
-      } catch {
-        return `${parsed.toISOString()} (${targetTz})`;
-      }
-    }
-
-    function isStaleBalanceSnapshot(current, incoming) {
-      if (!current || !incoming) return false;
-      if (!current.configured || !incoming.configured) return false;
-      if (
-        current.key_fingerprint !== incoming.key_fingerprint ||
-        current.billing_month !== incoming.billing_month
-      ) {
-        return false;
-      }
-      const curCount = Number(current.request_count || 0);
-      const nextCount = Number(incoming.request_count || 0);
-      if (nextCount < curCount) return true;
-      if (nextCount === curCount && Number(incoming.used_usd || 0) < Number(current.used_usd || 0)) {
-        return true;
-      }
-      return false;
-    }
-
-    function updateBalanceUI(nextBalance, options = {}) {
-      if (!nextBalance || typeof nextBalance !== "object") return;
-      if (!options.authoritative && isStaleBalanceSnapshot(balanceState, nextBalance)) {
-        return;
-      }
-      balanceState = nextBalance;
-      const pillEl = document.getElementById("balanceStatus");
-      const bannerEl = document.getElementById("balanceBanner");
-      const bannerTextEl = document.getElementById("balanceBannerText");
-
-      if (!nextBalance.configured) {
-        pillEl.className = "pill balance-pill err";
-        pillEl.innerHTML = `<span class="dot"></span>未配置 API_KEY`;
-        pillEl.title = nextBalance.disabled_reason || "未配置 API_KEY";
-        bannerEl.classList.remove("show");
-        renderQueue();
-        return;
-      }
-
-      const remaining = formatUsd(nextBalance.remaining_usd, 2);
-      const budget = formatUsd(nextBalance.monthly_budget_usd, 2);
-      const used = formatUsd(nextBalance.used_usd, 3);
-      const disableThreshold = formatUsd(nextBalance.disable_threshold_usd, 2);
-      const warnThreshold = formatUsd(nextBalance.warn_threshold_usd, 2);
-      const resetLabel = formatResetTime(nextBalance.next_reset_at, nextBalance.timezone);
-      const offsetLine = nextBalance.offset_used_usd > 0
-        ? `\n含外部校准偏移：${formatUsd(nextBalance.offset_used_usd, 2)}`
-        : "";
-
-      pillEl.title =
-        `账期：${nextBalance.billing_month} (${nextBalance.timezone || "UTC"})\n` +
-        `本月已用：${used} / ${budget}（共 ${nextBalance.request_count || 0} 次）${offsetLine}\n` +
-        `预警阈值：${warnThreshold} · 禁用阈值：${disableThreshold}\n` +
-        `下次重置：${resetLabel}\n` +
-        `说明：基于官方单价的本地实时估算`;
-
-      if (nextBalance.disabled || nextBalance.status === "disabled") {
-        pillEl.className = "pill balance-pill err";
-        pillEl.innerHTML = `<span class="dot"></span>余额不足 ${remaining}（已禁用）`;
-        bannerTextEl.innerHTML =
-          `<strong>生图功能已暂停：</strong>${escapeHtml(nextBalance.disabled_reason || `当前估算余额 ${remaining} 已触及禁用阈值 ${disableThreshold}。`)}` +
-          `<span>历史记录浏览与图片 / ZIP 下载仍可正常使用。</span>`;
-        bannerEl.classList.add("show");
-      } else if (nextBalance.status === "warn") {
-        pillEl.className = "pill balance-pill warn";
-        pillEl.innerHTML = `<span class="dot"></span>余额 ${remaining} / ${budget}`;
-        bannerEl.classList.remove("show");
-      } else {
-        pillEl.className = "pill balance-pill ok";
-        pillEl.innerHTML = `<span class="dot"></span>余额 ${remaining} / ${budget}`;
-        bannerEl.classList.remove("show");
-      }
-      renderQueue();
-    }
-
-    async function refreshBalance() {
-      try {
-        const response = await fetch("/api/balance");
-        if (!response.ok) return;
-        const data = await response.json();
-        updateBalanceUI(data, { authoritative: true });
-      } catch {
-        // Keep existing UI state if refresh fails transiently
-      }
-    }
-
-    function showToast(message) {
-      const toastEl = document.getElementById("toast");
-      toastEl.textContent = message;
-      toastEl.classList.add("show");
-      clearTimeout(showToast.timer);
-      showToast.timer = setTimeout(() => toastEl.classList.remove("show"), 2600);
-    }
-
-    function loadCustomPresets() {
-      try {
-        const saved = localStorage.getItem(CUSTOM_PRESETS_KEY);
-        customPresets = saved ? JSON.parse(saved) : [];
-      } catch {
-        customPresets = [];
-      }
-    }
-
-    function saveCustomPresetsToStorage() {
-      localStorage.setItem(CUSTOM_PRESETS_KEY, JSON.stringify(customPresets));
-    }
-
-    function getAllPresets() {
-      return [...builtInPresets, ...customPresets];
-    }
-
-    function renderPresets() {
-      const container = document.getElementById("presetGrid");
-      container.innerHTML = "";
-      for (const preset of getAllPresets()) {
-        const pill = document.createElement("button");
-        pill.type = "button";
-        pill.className = "preset-pill" + (preset.id === activePresetId ? " active" : "");
-        pill.title = preset.description || preset.name;
-        pill.onclick = () => selectPreset(preset.id);
-
-        const title = document.createElement("span");
-        title.textContent = preset.name;
-        pill.appendChild(title);
-
-        if (preset.custom) {
-          const delBtn = document.createElement("span");
-          delBtn.className = "preset-del";
-          delBtn.setAttribute("role", "button");
-          delBtn.title = "删除模板";
-          delBtn.textContent = "×";
-          delBtn.onclick = (event) => {
-            event.stopPropagation();
-            customPresets = customPresets.filter((item) => item.id !== preset.id);
-            saveCustomPresetsToStorage();
-            if (activePresetId === preset.id && builtInPresets.length) {
-              selectPreset(builtInPresets[0].id);
-            } else {
-              renderPresets();
-            }
-            showToast("已删除自定义模板");
-          };
-          pill.appendChild(delBtn);
-        }
-
-        container.appendChild(pill);
-      }
-    }
-
-    function getActivePreset() {
-      return getAllPresets().find((item) => item.id === activePresetId) || null;
-    }
-
-    function selectPreset(presetId) {
-      const found = getAllPresets().find((item) => item.id === presetId);
-      if (!found) return;
-      activePresetId = found.id;
-      const promptEl = document.getElementById("promptInput");
-      promptEl.value = found.prompt;
-      const descEl = document.getElementById("activePresetDesc");
-      descEl.textContent = found.description || "可直接修改下方提示词或输入自定义要求";
-      syncPromptEditorState();
-      renderPresets();
-    }
-
-    function resetPromptToPreset() {
-      selectPreset(activePresetId);
-      showToast("已恢复当前场景默认提示词");
-    }
-
-    function saveCustomPreset() {
-      const text = document.getElementById("promptInput").value.trim();
-      if (!text) {
-        showToast("提示词不能为空");
-        return;
-      }
-      const name = window.prompt("给这个自定义提示词模板起个名字：", "我的白底模板");
-      if (!name || !name.trim()) return;
-      const newPreset = {
-        id: "custom_" + Date.now(),
-        name: name.trim(),
-        tag: "自定义",
-        description: text.slice(0, 56) + (text.length > 56 ? "..." : ""),
-        prompt: text,
-        custom: true,
-      };
-      customPresets.push(newPreset);
-      saveCustomPresetsToStorage();
-      activePresetId = newPreset.id;
-      document.getElementById("activePresetDesc").textContent = newPreset.description;
-      renderPresets();
-      syncPromptEditorState();
-      showToast("已保存自定义模板");
-    }
-
-    function syncPromptEditorState() {
-      const text = document.getElementById("promptInput").value;
-      document.getElementById("promptCharCount").textContent = `${text.length} 字符`;
-      const activePreset = getActivePreset();
-      const modified = activePreset
-        ? UI.isPromptModified(text, activePreset.prompt)
-        : text.trim().length > 0;
-      document.getElementById("promptModifiedBadge").hidden = !modified;
-      document.getElementById("resetPromptBtn").disabled = !modified || !activePreset;
-    }
-
-    function readAdvancedSettings() {
-      const settings = {};
-      for (const field of ADVANCED_FIELDS) {
-        const el = document.getElementById(field.id);
-        if (field.key === "model" && el.options.length === 0) {
-          settings[field.key] = advancedDefaults.model;
-          continue;
-        }
-        settings[field.key] = el[field.prop];
-      }
-      return settings;
-    }
-
-    function syncAdvancedDirtyIndicator() {
-      const isDirty = UI.hasCustomAdvancedSettings(readAdvancedSettings(), advancedDefaults);
-      document.getElementById("advancedDirtyDot").hidden = !isDirty;
-      document.getElementById("advancedSettingsBtn").classList.toggle("has-custom", isDirty);
-    }
-
-    function resetAdvancedSettings() {
-      for (const field of ADVANCED_FIELDS) {
-        document.getElementById(field.id)[field.prop] = advancedDefaults[field.key];
-      }
-      syncAdvancedDirtyIndicator();
-      showToast("已恢复默认高级设置");
-    }
-
-    function openAdvancedDrawer() {
-      document.getElementById("advancedDrawerBackdrop").classList.add("open");
-    }
-
-    function closeAdvancedDrawer() {
-      document.getElementById("advancedDrawerBackdrop").classList.remove("open");
-    }
-
-    function setGatewayError(message) {
-      const statusEl = document.getElementById("gatewayStatus");
-      if (!message) {
-        statusEl.hidden = true;
-        return;
-      }
-      statusEl.className = "pill err";
-      statusEl.innerHTML = `<span class="dot"></span>${escapeHtml(message)}`;
-      statusEl.hidden = false;
-    }
-
-    async function initApp() {
-      loadCustomPresets();
-      try {
-        const response = await fetch("/api/config");
-        const config = await response.json();
-        builtInPresets = config.presets || [];
-        if (config.default_model) advancedDefaults.model = config.default_model;
-        if (config.default_quality) advancedDefaults.quality = config.default_quality;
-
-        const modelSelect = document.getElementById("modelSelect");
-        modelSelect.innerHTML = "";
-        for (const modelInfo of config.models || []) {
-          const option = document.createElement("option");
-          option.value = modelInfo.id;
-          option.textContent = modelInfo.label;
-          if (modelInfo.id === advancedDefaults.model) option.selected = true;
-          modelSelect.appendChild(option);
-        }
-        document.getElementById("qualitySelect").value = advancedDefaults.quality;
-        syncAdvancedDirtyIndicator();
-
-        setGatewayError(config.api_configured ? "" : "未检测到 API_KEY");
-        if (config.balance) {
-          updateBalanceUI(config.balance, { authoritative: true });
-        }
-        if (builtInPresets.length > 0) {
-          selectPreset(builtInPresets[0].id);
-        }
-      } catch (err) {
-        setGatewayError("后端连接失败");
-        const balanceEl = document.getElementById("balanceStatus");
-        balanceEl.className = "pill balance-pill err";
-        balanceEl.innerHTML = `<span class="dot"></span>余额读取失败`;
-      }
-    }
-
-    function addFiles(fileList) {
-      const validFiles = Array.from(fileList).filter((file) => file.type.startsWith("image/"));
-      if (!validFiles.length) {
-        showToast("请选择有效的图片文件");
-        return;
-      }
-      for (const file of validFiles) {
-        const previewUrl = URL.createObjectURL(file);
-        queueItems.push({
-          uid: "item_" + Math.random().toString(36).slice(2, 10),
-          file,
-          name: file.name || `粘贴图片_${queueItems.length + 1}.png`,
-          previewUrl,
-          status: "pending",
-          result: null,
-          error: "",
-        });
-      }
-      renderQueue();
-      showToast(`已加入 ${validFiles.length} 张图片`);
-    }
-
-    function renderQueue() {
-      const dropzone = document.getElementById("dropzone");
-      const pickBtn = document.getElementById("pickBtn");
-      const toolbar = document.getElementById("toolbar");
-      const grid = document.getElementById("cardGrid");
-      const runBtn = document.getElementById("runBatchBtn");
-
-      if (queueItems.length > 0) {
-        dropzone.classList.add("compact");
-        pickBtn.style.display = "inline-flex";
-        toolbar.style.display = "flex";
-      } else {
-        dropzone.classList.remove("compact");
-        pickBtn.style.display = "none";
-        toolbar.style.display = "none";
-      }
-
-      const total = queueItems.length;
-      const doneCount = queueItems.filter((item) => item.status === "done").length;
-      const runningCount = queueItems.filter((item) => item.status === "running").length;
-      const errorCount = queueItems.filter((item) => item.status === "error").length;
-      const pendingCount = queueItems.filter((item) => item.status === "pending").length;
-
-      document.getElementById("statsText").innerHTML =
-        `<span>共 <strong>${total}</strong> 张</span>` +
-        `<span>已完成 <strong style="color:var(--success)">${doneCount}</strong></span>` +
-        (runningCount ? `<span>处理中 <strong style="color:var(--accent)">${runningCount}</strong></span>` : "") +
-        (errorCount ? `<span>失败 <strong style="color:var(--danger)">${errorCount}</strong></span>` : "");
-
-      const percent = total ? Math.round(((doneCount + errorCount) / total) * 100) : 0;
-      document.getElementById("progressBar").style.width = `${percent}%`;
-
-      const generationDisabled = isGenerationDisabled();
-      const toolbarState = UI.computeToolbarState({
-        total,
-        doneCount,
-        pendingCount,
-        runningCount,
-        errorCount,
-        isBatchRunning,
-        stopRequested,
-        generationDisabled,
-        apiConfigured: !(balanceState && !balanceState.configured),
-      });
-
-      const zipBtn = document.getElementById("zipBtn");
-      zipBtn.disabled = toolbarState.zipButton.disabled;
-      zipBtn.className = BUTTON_VARIANT_CLASS[toolbarState.zipButton.variant] || "btn";
-
-      const retryFailedBtn = document.getElementById("retryFailedBtn");
-      retryFailedBtn.style.display = toolbarState.retryFailedVisible ? "inline-flex" : "none";
-      retryFailedBtn.disabled = generationDisabled;
-
-      runBtn.className = BUTTON_VARIANT_CLASS[toolbarState.runButton.variant] || "btn";
-      runBtn.disabled = toolbarState.runButton.disabled;
-      runBtn.textContent = toolbarState.runButton.label;
-
-      grid.innerHTML = "";
-      for (const item of queueItems) {
-        const card = document.createElement("div");
-        card.className = "item-card";
-
-        const statusLabelMap = {
-          pending: ["待生成", "badge-pending"],
-          running: ["生成中...", "badge-running"],
-          done: ["已完成", "badge-done"],
-          error: ["失败", "badge-error"],
-        };
-        const [badgeText, badgeClass] = statusLabelMap[item.status];
-
-        let resultHtml = "";
-        if (item.status === "done" && item.result) {
-          resultHtml = `<img src="${item.result.url}?t=${item.result.created_at}" alt="白底成品" />
-                        <span class="pane-label">白底成品</span>`;
-        } else if (item.status === "running") {
-          resultHtml = `<div class="placeholder-state"><div class="spinner"></div><span>正在生成白底图...</span></div>`;
-        } else if (item.status === "error") {
-          resultHtml = `<div class="placeholder-state"><span style="color:var(--danger);font-weight:600;">生成失败</span><span>可点击下方重试</span></div>`;
-        } else {
-          resultHtml = `<div class="placeholder-state"><span>等待开始</span></div>`;
-        }
-
-        let metaHtml = "";
-        if (item.result) {
-          metaHtml = `<div>成品：${escapeHtml(UI.formatResultSummary(item.result))}</div>`;
-        } else if (item.error) {
-          metaHtml = `<div class="error-msg">${escapeHtml(item.error)}</div>`;
-        } else {
-          metaHtml = `<div>原图大小：${(item.file.size / 1024).toFixed(1)} KB</div>`;
-        }
-
-        card.innerHTML = `
-          <div class="item-header">
-            <span class="item-title" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</span>
-            <span class="badge ${badgeClass}">${badgeText}</span>
-          </div>
-          <div class="compare-pair">
-            <div class="img-pane">
-              <img src="${item.previewUrl}" alt="原图" />
-              <span class="pane-label">原图</span>
-            </div>
-            <div class="img-pane result-pane" ${item.result ? `onclick="openCompareModal('${item.uid}')"` : ""}>
-              ${resultHtml}
-            </div>
-          </div>
-          <div class="item-meta">${metaHtml}</div>
-          <div class="item-footer">
-            <div style="display:flex; gap:6px;">
-              ${item.result ? `<button class="btn btn-sm" onclick="openCompareModal('${item.uid}')">滑块对比</button>` : ""}
-              <button class="btn btn-sm" onclick="runSingleItem('${item.uid}')" ${(item.status === "running" || generationDisabled) ? "disabled" : ""}>${item.result ? "重生成" : "单张生成"}</button>
-            </div>
-            <div style="display:flex; gap:6px;">
-              ${item.result ? `<a class="btn btn-sm btn-primary" href="${item.result.url}" download="${escapeHtml(item.result.filename)}">下载</a>` : ""}
-              <button class="btn btn-sm" onclick="removeItem('${item.uid}')" ${item.status === "running" ? "disabled" : ""}>移除</button>
-            </div>
-          </div>
-        `;
-        grid.appendChild(card);
-      }
-    }
-
-    function escapeHtml(str) {
-      return String(str).replace(/[&<>"']/g, (ch) => ({
-        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-      }[ch]));
-    }
-
-    function removeItem(uid) {
-      const found = queueItems.find((item) => item.uid === uid);
-      if (found && found.previewUrl) URL.revokeObjectURL(found.previewUrl);
-      queueItems = queueItems.filter((item) => item.uid !== uid);
-      renderQueue();
-    }
-
-    function clearQueue() {
-      if (isBatchRunning) {
-        showToast("请先停止正在运行的任务");
-        return;
-      }
-      if (
-        UI.shouldConfirmClearQueue(queueItems) &&
-        !window.confirm("列表中包含已生成的白底图，确定要清空吗？（已生成图片仍可在「历史生成」中查看）")
-      ) {
-        return;
-      }
-      for (const item of queueItems) {
-        if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
-      }
-      queueItems = [];
-      renderQueue();
-    }
-
-    function buildFormData(file) {
-      const formData = new FormData();
-      formData.append("file", file, file.name || "image.png");
-      formData.append("prompt", document.getElementById("promptInput").value.trim());
-      formData.append("model", document.getElementById("modelSelect").value);
-      formData.append("quality", document.getElementById("qualitySelect").value);
-      formData.append("size", "1024x1024");
-      formData.append("export_size", document.getElementById("exportSizeSelect").value);
-      formData.append("export_format", document.getElementById("exportFormatSelect").value);
-      formData.append("auto_crop_screenshot", document.getElementById("optAutoCrop").checked ? "true" : "false");
-      formData.append("max_input_edge", document.getElementById("optMaxEdge").checked ? "1024" : "0");
-      formData.append("enhance_small", document.getElementById("optEnhanceSmall").checked ? "true" : "false");
-      return formData;
-    }
-
-    async function processOneItem(item) {
-      item.status = "running";
-      item.error = "";
-      renderQueue();
-      try {
-        const response = await fetch("/api/generate", {
-          method: "POST",
-          body: buildFormData(item.file),
-        });
-        let data = {};
-        try {
-          data = await response.json();
-        } catch {
-          data = {};
-        }
-        if (data && data.balance) {
-          updateBalanceUI(data.balance);
-          if (data.balance.disabled && isBatchRunning) {
-            stopRequested = true;
-          }
-        }
-        if (!response.ok) {
-          if (response.status === 402 && isBatchRunning) {
-            stopRequested = true;
-          }
-          throw new Error(data.detail || `请求失败 (${response.status})`);
-        }
-        item.status = "done";
-        item.result = data;
-      } catch (err) {
-        item.status = "error";
-        item.error = err.message || "未知错误";
-      }
-      renderQueue();
-    }
-
-    async function runSingleItem(uid) {
-      if (!guardGenerationAllowed()) return;
-      const promptText = document.getElementById("promptInput").value.trim();
-      if (!promptText) {
-        showToast("Prompt 不能为空");
-        return;
-      }
-      const item = queueItems.find((entry) => entry.uid === uid);
-      if (!item || item.status === "running") return;
-      await processOneItem(item);
-    }
-
-    async function startOrStopBatch() {
-      if (isBatchRunning) {
-        stopRequested = true;
-        renderQueue();
-        showToast("将在当前请求完成后停止队列");
-        return;
-      }
-      if (!guardGenerationAllowed()) return;
-      const promptText = document.getElementById("promptInput").value.trim();
-      if (!promptText) {
-        showToast("请先输入 Prompt");
-        return;
-      }
-      let targets = queueItems.filter((item) => item.status === "pending" || item.status === "error");
-      if (targets.length === 0 && queueItems.length > 0) {
-        for (const item of queueItems) {
-          item.status = "pending";
-          item.error = "";
-        }
-        targets = [...queueItems];
-      }
-      if (targets.length === 0) return;
-
-      isBatchRunning = true;
-      stopRequested = false;
-      renderQueue();
-
-      const concurrency = parseInt(document.getElementById("concurrencySelect").value, 10) || 2;
-      let cursor = 0;
-
-      async function worker() {
-        while (!stopRequested && !isGenerationDisabled()) {
-          const currentIndex = cursor++;
-          if (currentIndex >= targets.length) break;
-          await processOneItem(targets[currentIndex]);
-        }
-      }
-
-      const workers = Array.from({ length: Math.min(concurrency, targets.length) }, () => worker());
-      await Promise.all(workers);
-
-      await refreshBalance();
-      const stoppedForBalance = isGenerationDisabled();
-      isBatchRunning = false;
-      stopRequested = false;
-      renderQueue();
-      showToast(stoppedForBalance ? "余额已触及禁用阈值，已停止剩余任务" : "批量处理结束");
-    }
-
-    function retryFailedItems() {
-      if (isBatchRunning || isGenerationDisabled()) return;
-      for (const item of queueItems) {
-        if (item.status === "error") item.status = "pending";
-      }
-      startOrStopBatch();
-    }
-
-    async function downloadZipByNames(filenames) {
-      if (!filenames.length) return;
-      try {
-        const response = await fetch("/api/download-zip", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filenames }),
-        });
-        if (!response.ok) throw new Error("打包失败");
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `aliexpress_white_bg_${Date.now()}.zip`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(url);
-      } catch (err) {
-        showToast(err.message || "下载 ZIP 失败");
-      }
-    }
-
-    function downloadAllZip() {
-      const filenames = queueItems.filter((item) => item.status === "done" && item.result).map((item) => item.result.filename);
-      downloadZipByNames(filenames);
-    }
-
-    function openCompareModal(uid) {
-      const item = queueItems.find((entry) => entry.uid === uid);
-      if (!item || !item.result) return;
-      document.getElementById("modalTitle").textContent = `${item.name} — 拖动滑块对比细节`;
-      document.getElementById("modalOrigImg").src = item.previewUrl;
-      document.getElementById("modalResultImg").src = `${item.result.url}?t=${item.result.created_at}`;
-      document.getElementById("modalMetaText").textContent = UI.formatResultSummary(item.result);
-      const dl = document.getElementById("modalDownloadLink");
-      dl.href = item.result.url;
-      dl.download = item.result.filename;
-      document.getElementById("compareSlider").value = 50;
-      updateSlider(50);
-      document.getElementById("compareModal").classList.add("open");
-    }
-
-    function updateSlider(val) {
-      const pct = Number(val);
-      document.getElementById("sliderAfterWrap").style.clipPath = `inset(0 0 0 ${pct}%)`;
-      document.getElementById("sliderDivider").style.left = `${pct}%`;
-      document.getElementById("sliderHandle").style.left = `${pct}%`;
-    }
-
-    function closeModal() {
-      document.getElementById("compareModal").classList.remove("open");
-    }
-
-    function switchTab(tab) {
-      document.getElementById("tabBatch").classList.toggle("active", tab === "batch");
-      document.getElementById("tabHistory").classList.toggle("active", tab === "history");
-      document.getElementById("batchView").style.display = tab === "batch" ? "flex" : "none";
-      document.getElementById("historyView").style.display = tab === "history" ? "flex" : "none";
-      if (tab === "history") loadHistory();
-    }
-
-    async function loadHistory() {
-      const grid = document.getElementById("historyGrid");
-      grid.innerHTML = `<div class="empty-history">加载中...</div>`;
-      try {
-        const response = await fetch("/api/history?limit=40");
-        const data = await response.json();
-        historyItems = data.items || [];
-        if (!historyItems.length) {
-          grid.innerHTML = `<div class="panel empty-history">暂无历史生成记录</div>`;
-          return;
-        }
-        grid.innerHTML = "";
-        for (const item of historyItems) {
-          const card = document.createElement("div");
-          card.className = "item-card";
-          card.innerHTML = `
-            <div class="item-header">
-              <span class="item-title" title="${escapeHtml(item.orig_name)}">${escapeHtml(item.orig_name)}</span>
-              <span class="badge badge-done">${item.output_size}</span>
-            </div>
-            <div class="img-pane result-pane" style="aspect-ratio:1/1;">
-              <img src="${item.url}" alt="成品" />
-            </div>
-            <div class="item-meta">
-              <div>${escapeHtml(UI.formatResultSummary(item))}</div>
-            </div>
-            <div class="item-footer">
-              <span style="font-size:11px;color:var(--text-3);">${new Date(item.created_at * 1000).toLocaleString()}</span>
-              <a class="btn btn-sm btn-primary" href="${item.url}" download="${escapeHtml(item.filename)}">下载</a>
-            </div>
-          `;
-          grid.appendChild(card);
-        }
-      } catch (err) {
-        grid.innerHTML = `<div class="panel empty-history">加载历史失败</div>`;
-      }
-    }
-
-    function downloadHistoryZip() {
-      downloadZipByNames(historyItems.map((item) => item.filename));
-    }
-
-    const dropzoneEl = document.getElementById("dropzone");
-    const fileInputEl = document.getElementById("fileInput");
-
-    dropzoneEl.addEventListener("click", () => fileInputEl.click());
-    fileInputEl.addEventListener("change", (event) => {
-      if (event.target.files.length) addFiles(event.target.files);
-      event.target.value = "";
-    });
-
-    dropzoneEl.addEventListener("dragover", (event) => {
-      event.preventDefault();
-      dropzoneEl.classList.add("dragover");
-    });
-    dropzoneEl.addEventListener("dragleave", () => dropzoneEl.classList.remove("dragover"));
-    dropzoneEl.addEventListener("drop", (event) => {
-      event.preventDefault();
-      dropzoneEl.classList.remove("dragover");
-      if (event.dataTransfer.files.length) addFiles(event.dataTransfer.files);
-    });
-
-    window.addEventListener("paste", (event) => {
-      const items = event.clipboardData && event.clipboardData.items;
-      if (!items) return;
-      const files = [];
-      for (const entry of items) {
-        if (entry.type.startsWith("image/")) {
-          const blob = entry.getAsFile();
-          if (blob) files.push(blob);
-        }
-      }
-      if (files.length) addFiles(files);
-    });
-
-    document.getElementById("promptInput").addEventListener("input", syncPromptEditorState);
-    for (const field of ADVANCED_FIELDS) {
-      document.getElementById(field.id).addEventListener("change", syncAdvancedDirtyIndicator);
-    }
-    window.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") {
-        closeModal();
-        closeAdvancedDrawer();
-      }
-    });
-
-    initApp();
   </script>
 </body>
 </html>

@@ -168,7 +168,7 @@ class TestUiLogic(unittest.TestCase):
             )
         )
 
-    def test_result_meta_summary_omits_technical_noise(self):
+    def test_result_meta_summary_shows_cost_and_omits_technical_noise(self):
         summary = _run_node_eval(
             """ui.formatResultSummary({
                 output_size: "1000x1000",
@@ -184,10 +184,25 @@ class TestUiLogic(unittest.TestCase):
         self.assertIn("1000x1000", summary)
         self.assertIn("245.6 KB", summary)
         self.assertIn("8.4s", summary)
+        self.assertIn("约 $0.042", summary)
         self.assertNotIn("tokens", summary.lower())
-        self.assertNotIn("$", summary)
         self.assertNotIn("预处理", summary)
         self.assertNotIn("gpt-image", summary)
+
+    def test_batch_cost_estimation_and_preprocess_tags(self):
+        est = _run_node_eval('ui.estimateBatchCostUsd(5, "gpt-image-2.5-sunburst", "medium")')
+        self.assertAlmostEqual(est, 0.2, places=3)
+        mini_est = _run_node_eval('ui.estimateBatchCostUsd(4, "gpt-image-1-mini", "low")')
+        self.assertAlmostEqual(mini_est, 0.024, places=3)
+
+        tags = _run_node_eval(
+            'ui.formatPreprocessTags({ actions: ["长截图裁取上半区", "长边限 1024px 缩放", "小图轻度锐化"] })'
+        )
+        self.assertEqual(tags, ["已裁长截图", "已限边缩放", "小图锐化"])
+
+        friendly = _run_node_eval('ui.formatFriendlyError("API 返回错误 (429): rate limit", 429)')
+        self.assertIn("429", friendly)
+        self.assertIn("并发", friendly)
 
 
 class _IdOrderParser(HTMLParser):
