@@ -39,6 +39,8 @@ let queueItems = [];
 let historyItems = [];
 let isBatchRunning = false;
 let stopRequested = false;
+let isBatchExporting = false;
+let batchExportProgressText = "";
 let balanceState = null;
 let pasteCounter = 0;
 let inspectBg = "white";
@@ -754,7 +756,7 @@ function buildCardInnerHtml(item) {
         <button class="btn btn-sm" type="button" data-role="single-run" onclick="runSingleItem('${item.uid}')" ${(item.status === "running" || generationDisabled) ? "disabled" : ""}>${item.result ? "重生成" : "单张生成"}</button>
       </div>
       <div class="item-footer-group">
-        ${item.result ? `<a class="btn btn-sm btn-primary" href="${item.result.url}" download="${escapeHtml(item.result.filename)}">下载</a>` : ""}
+        ${item.result ? `<a class="btn btn-sm btn-primary" href="${item.result.url}" download="${escapeHtml(UI.deriveExportFilename(item.result))}">下载</a>` : ""}
         <button class="btn btn-sm btn-subtle-danger" type="button" onclick="removeItem('${item.uid}')" ${item.status === "running" ? "disabled" : ""}>移除</button>
       </div>
     </div>
@@ -857,12 +859,30 @@ function syncToolbarUI() {
     stopRequested,
     generationDisabled,
     apiConfigured: !(balanceState && !balanceState.configured),
+    supportsFolderExport: supportsFolderExport(),
+    isExporting: isBatchExporting,
   });
 
+  const exportSplitWrap = document.getElementById("exportSplitWrap");
   const zipBtn = document.getElementById("zipBtn");
-  if (zipBtn.dataset.packing !== "true") {
-    zipBtn.disabled = toolbarState.zipButton.disabled;
-    zipBtn.className = BUTTON_VARIANT_CLASS[toolbarState.zipButton.variant] || "btn";
+  const exportMenuBtn = document.getElementById("exportMenuBtn");
+  const exportVariantClass =
+    BUTTON_VARIANT_CLASS[toolbarState.zipButton.variant] || "btn";
+
+  zipBtn.disabled = toolbarState.zipButton.disabled;
+  zipBtn.className = exportVariantClass;
+  zipBtn.textContent = isBatchExporting && batchExportProgressText
+    ? batchExportProgressText
+    : toolbarState.zipButton.label;
+
+  if (exportSplitWrap && exportMenuBtn) {
+    exportMenuBtn.hidden = !toolbarState.exportSplitVisible;
+    exportMenuBtn.disabled = toolbarState.exportSplitDisabled;
+    exportMenuBtn.className = `${exportVariantClass} split-btn-toggle`;
+    exportSplitWrap.classList.toggle("has-split", toolbarState.exportSplitVisible);
+    if (!toolbarState.exportSplitVisible || toolbarState.exportSplitDisabled) {
+      toggleExportMenu(false);
+    }
   }
 
   const retryFailedBtn = document.getElementById("retryFailedBtn");
@@ -1080,6 +1100,20 @@ function retryFailedItems() {
   startOrStopBatch();
 }
 
+async function fetchAndSaveZip(filenames) {
+  const response = await fetch("/api/download-zip", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ filenames }),
+  });
+  if (!response.ok) throw new Error("ZIP 打包失败，请稍后重试");
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  triggerAnchorDownload(url, `aliexpress_white_bg_${Date.now()}.zip`);
+  URL.revokeObjectURL(url);
+  showToast(`已打包下载 ${filenames.length} 张成品图`);
+}
+
 async function downloadZipByNames(filenames, triggerBtn) {
   if (!filenames.length) return;
   const origLabel = triggerBtn ? triggerBtn.textContent : "";
@@ -1089,44 +1123,111 @@ async function downloadZipByNames(filenames, triggerBtn) {
     triggerBtn.textContent = "打包中...";
   }
   try {
-    const response = await fetch("/api/download-zip", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filenames }),
-    });
-    if (!response.ok) throw new Error("ZIP 打包失败，请稍后重试");
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `aliexpress_white_bg_${Date.now()}.zip`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    showToast(`已打包下载 ${filenames.length} 张成品图`);
+    await fetchAndSaveZip(filenames);
   } catch (err) {
     showToast(err.message || "下载 ZIP 失败");
   } finally {
     if (triggerBtn) {
       delete triggerBtn.dataset.packing;
       triggerBtn.textContent = origLabel;
-      if (triggerBtn.id === "zipBtn") {
-        syncToolbarUI();
-      } else {
-        triggerBtn.disabled = false;
-      }
+      triggerBtn.disabled = false;
     }
   }
 }
 
-function downloadAllZip() {
-  const filenames = queueItems.filter((item) => item.status === "done" && item.result).map((item) => item.result.filename);
-  downloadZipByNames(filenames, document.getElementById("zipBtn"));
+function getCompletedBatchItems() {
+  return queueItems.filter((entry) => entry.status === "done" && entry.result);
+}
+
+async function downloadAllZip() {
+  const filenames = getCompletedBatchItems().map((item) => item.result.filename);
+  if (!filenames.length || isBatchExporting) return;
+  isBatchExporting = true;
+  batchExportProgressText = "打包中...";
+  toggleExportMenu(false);
+  syncToolbarUI();
+  try {
+    await fetchAndSaveZip(filenames);
+  } catch (err) {
+    showToast(err.message || "下载 ZIP 失败");
+  } finally {
+    isBatchExporting = false;
+    batchExportProgressText = "";
+    syncToolbarUI();
+  }
+}
+
+function triggerPrimaryExport() {
+  if (isBatchExporting) return;
+  toggleExportMenu(false);
+  const completed = getCompletedBatchItems();
+  if (!completed.length) return;
+  if (completed.length === 1) {
+    const onlyResult = completed[0].result;
+    const exportName = UI.deriveExportFilename(onlyResult);
+    triggerAnchorDownload(onlyResult.url, exportName);
+    showToast(`已开始下载「${exportName}」`);
+    return;
+  }
+  downloadAllZip();
+}
+
+async function downloadBatchToFolder() {
+  toggleExportMenu(false);
+  if (isBatchExporting || !supportsFolderExport()) return;
+  const completed = getCompletedBatchItems();
+  if (completed.length < 2) return;
+
+  isBatchExporting = true;
+  batchExportProgressText = "选择文件夹...";
+  syncToolbarUI();
+
+  try {
+    const summary = await UI.exportItemsToDirectory(completed, {
+      pickDirectory: () =>
+        window.showDirectoryPicker({
+          id: "product-studio-export",
+          mode: "readwrite",
+        }),
+      fetchBlob: async (item) => {
+        const response = await fetch(item.result.url);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        return response.blob();
+      },
+      onProgress: ({ current, total }) => {
+        batchExportProgressText = `保存中 ${current}/${total}...`;
+        syncToolbarUI();
+      },
+    });
+
+    if (summary.cancelled) return;
+    if (summary.failed === 0) {
+      const folderLabel = summary.folderName ? `到「${summary.folderName}」` : "";
+      showToast(`已保存 ${summary.saved} 张成品图${folderLabel}`);
+    } else if (summary.saved > 0) {
+      showToast(
+        `已保存 ${summary.saved}/${summary.total} 张，${summary.failed} 张失败，可重试或改用 ZIP`,
+        { duration: 5000 }
+      );
+    } else {
+      showToast(
+        `保存失败（${summary.failed} 张），请检查目录权限或改用 ZIP`,
+        { duration: 5000 }
+      );
+    }
+  } catch {
+    showToast("无法写入所选文件夹，请检查权限或改用打包 ZIP", { duration: 4500 });
+  } finally {
+    isBatchExporting = false;
+    batchExportProgressText = "";
+    syncToolbarUI();
+  }
 }
 
 function getComparableQueueItems() {
-  return queueItems.filter((entry) => entry.status === "done" && entry.result);
+  return getCompletedBatchItems();
 }
 
 function renderCompareModalForQueue(item) {
@@ -1148,7 +1249,7 @@ function renderCompareModalForQueue(item) {
 
   const dl = document.getElementById("modalDownloadLink");
   dl.href = item.result.url;
-  dl.download = item.result.filename;
+  dl.download = UI.deriveExportFilename(item.result);
 
   const prevBtn = document.getElementById("modalPrevBtn");
   const nextBtn = document.getElementById("modalNextBtn");
@@ -1188,7 +1289,7 @@ function openHistoryPreviewModal(index) {
 
   const dl = document.getElementById("modalDownloadLink");
   dl.href = item.url;
-  dl.download = item.filename;
+  dl.download = UI.deriveExportFilename(item);
 
   const prevBtn = document.getElementById("modalPrevBtn");
   const nextBtn = document.getElementById("modalNextBtn");
@@ -1281,7 +1382,7 @@ async function loadHistory() {
           <span class="tabular" style="font-size:11px;color:var(--text-3);">${new Date(item.created_at * 1000).toLocaleString()}</span>
           <div class="item-footer-group">
             <button class="btn btn-sm" type="button" onclick="openHistoryPreviewModal(${index})">质检大图</button>
-            <a class="btn btn-sm btn-primary" href="${item.url}" download="${escapeHtml(item.filename)}">下载</a>
+            <a class="btn btn-sm btn-primary" href="${item.url}" download="${escapeHtml(UI.deriveExportFilename(item))}">下载</a>
           </div>
         </div>
       `;
@@ -1375,6 +1476,11 @@ function bindStudioEvents() {
     if (!pop.hidden && !pop.contains(event.target) && !btn.contains(event.target)) {
       toggleBalancePopover(false);
     }
+    const splitWrap = document.getElementById("exportSplitWrap");
+    const exportMenu = document.getElementById("exportMenu");
+    if (exportMenu && !exportMenu.hidden && splitWrap && !splitWrap.contains(event.target)) {
+      toggleExportMenu(false);
+    }
   });
 
   window.addEventListener("keydown", (event) => {
@@ -1408,6 +1514,7 @@ function bindStudioEvents() {
     }
     if (event.key === "Escape") {
       toggleBalancePopover(false);
+      toggleExportMenu(false);
     } else if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       if (queueItems.length > 0 && !isBatchRunning) {
         event.preventDefault();
@@ -1427,3 +1534,32 @@ window.ProductStudioApp = {
     initApp();
   },
 };
+function supportsFolderExport() {
+  return Boolean(
+    window.isSecureContext && typeof window.showDirectoryPicker === "function"
+  );
+}
+
+function toggleExportMenu(forceState) {
+  const menu = document.getElementById("exportMenu");
+  const btn = document.getElementById("exportMenuBtn");
+  if (!menu || !btn) return;
+  if (btn.hidden || btn.disabled) {
+    menu.hidden = true;
+    btn.setAttribute("aria-expanded", "false");
+    return;
+  }
+  const shouldOpen = typeof forceState === "boolean" ? forceState : menu.hidden;
+  menu.hidden = !shouldOpen;
+  btn.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+}
+
+function triggerAnchorDownload(url, exportFilename) {
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = exportFilename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+

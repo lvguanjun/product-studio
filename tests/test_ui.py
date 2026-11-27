@@ -210,6 +210,168 @@ def test_batch_cost_estimation_and_preprocess_tags() -> None:
     assert "并发" in friendly
 
 
+@pytest.mark.node
+def test_derive_export_filename_and_plan_batch_export_names() -> None:
+    assert (
+        _run_node_eval('ui.deriveExportFilename("a1b2c3d4e5f6_SKU_1_white.png")')
+        == "SKU_1_white.png"
+    )
+    assert (
+        _run_node_eval(
+            'ui.deriveExportFilename({ filename: "111111111111_old_white.png", export_filename: "custom_white.png" })'
+        )
+        == "custom_white.png"
+    )
+    assert _run_node_eval('ui.deriveExportFilename("plain.png")') == "plain.png"
+
+    planned = _run_node_eval(
+        """ui.planBatchExportNames(
+            [
+                { id: 1, result: { filename: "aaaaaaaaaaaa_mug_white.png" } },
+                { id: 2, result: { filename: "bbbbbbbbbbbb_MUG_white.png" } },
+                { id: 3, result: { filename: "cccccccccccc_cup_white.jpg" } }
+            ],
+            ["mug_white.png", "mug_white_2.png"]
+        ).map((entry) => ({ id: entry.item.id, exportName: entry.exportName }))"""
+    )
+    assert planned == [
+        {"id": 1, "exportName": "mug_white_3.png"},
+        {"id": 2, "exportName": "MUG_white_4.png"},
+        {"id": 3, "exportName": "cup_white.jpg"},
+    ]
+
+
+@pytest.mark.node
+def test_toolbar_state_handles_single_image_export_and_split_folder_export() -> None:
+    single_done = _compute_toolbar_state(
+        total=1, doneCount=1, supportsFolderExport=True
+    )
+    assert single_done["zipButton"]["mode"] == "single"
+    assert single_done["zipButton"]["label"] == "下载图片 (1 张)"
+    assert single_done["zipButton"]["variant"] == "primary"
+    assert not single_done["zipButton"]["disabled"]
+    assert not single_done["exportSplitVisible"]
+
+    multi_with_folder = _compute_toolbar_state(
+        total=3, doneCount=2, pendingCount=1, supportsFolderExport=True
+    )
+    assert multi_with_folder["zipButton"]["mode"] == "zip"
+    assert multi_with_folder["zipButton"]["label"] == "打包下载 ZIP"
+    assert not multi_with_folder["zipButton"]["disabled"]
+    assert multi_with_folder["exportSplitVisible"]
+    assert not multi_with_folder["exportSplitDisabled"]
+
+    multi_without_folder = _compute_toolbar_state(
+        total=3, doneCount=3, supportsFolderExport=False
+    )
+    assert multi_without_folder["zipButton"]["mode"] == "zip"
+    assert not multi_without_folder["exportSplitVisible"]
+
+    exporting_while_running = _compute_toolbar_state(
+        total=4,
+        doneCount=2,
+        pendingCount=1,
+        runningCount=1,
+        isBatchRunning=True,
+        supportsFolderExport=True,
+        isExporting=True,
+    )
+    assert not exporting_while_running["runButton"]["disabled"]
+    assert exporting_while_running["zipButton"]["disabled"]
+    assert exporting_while_running["exportSplitDisabled"]
+
+
+@pytest.mark.node
+def test_export_items_to_directory_avoids_overwrites_tracks_progress_and_tolerates_partial_failure() -> (
+    None
+):
+    script = f"""
+    const ui = require({json.dumps(str(UI_LOGIC_PATH))});
+    async function main() {{
+      const written = {{}};
+      const removed = [];
+      const progressEvents = [];
+      const existing = ["mug_white.png"];
+      const fakeDir = {{
+        name: "AliExpressMain",
+        async *keys() {{
+          for (const name of existing) yield name;
+        }},
+        async getFileHandle(name, opts) {{
+          if (!opts || !opts.create) throw new Error("expected create: true");
+          return {{
+            async createWritable() {{
+              let chunks = [];
+              return {{
+                async write(data) {{
+                  if (data === "write-fail") throw new Error("disk full");
+                  chunks.push(data);
+                }},
+                async close() {{ written[name] = chunks.join(""); }},
+                async abort() {{ chunks = []; }},
+              }};
+            }},
+          }};
+        }},
+        async removeEntry(name) {{
+          removed.push(name);
+        }},
+      }};
+
+      const items = [
+        {{ uid: "1", result: {{ filename: "aaaaaaaaaaaa_mug_white.png", url: "/api/outputs/1" }} }},
+        {{ uid: "2", result: {{ filename: "bbbbbbbbbbbb_fail_white.png", url: "/api/outputs/2" }} }},
+        {{ uid: "3", result: {{ filename: "cccccccccccc_mug_white.png", url: "/api/outputs/3" }} }},
+        {{ uid: "4", result: {{ filename: "dddddddddddd_disk_white.png", url: "/api/outputs/4" }} }},
+      ];
+
+      const summary = await ui.exportItemsToDirectory(items, {{
+        pickDirectory: async () => fakeDir,
+        fetchBlob: async (item) => {{
+          if (item.uid === "2") throw new Error("network error");
+          if (item.uid === "4") return "write-fail";
+          return "bytes-" + item.uid;
+        }},
+        onProgress: (evt) => progressEvents.push(evt),
+      }});
+
+      const abortSummary = await ui.exportItemsToDirectory(items, {{
+        pickDirectory: async () => {{
+          const err = new Error("user cancelled");
+          err.name = "AbortError";
+          throw err;
+        }},
+        fetchBlob: async () => "never",
+      }});
+
+      process.stdout.write(JSON.stringify({{ summary, written, removed, progressEvents, abortSummary }}));
+    }}
+    main().catch((err) => {{ console.error(err); process.exit(1); }});
+    """
+    completed = subprocess.run(
+        ["node", "-e", script],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    data = json.loads(completed.stdout)
+
+    assert data["summary"]["cancelled"] is False
+    assert data["summary"]["folderName"] == "AliExpressMain"
+    assert data["summary"]["saved"] == 2
+    assert data["summary"]["failed"] == 2
+    assert data["summary"]["total"] == 4
+    assert data["written"] == {
+        "mug_white_2.png": "bytes-1",
+        "mug_white_3.png": "bytes-3",
+    }
+    assert data["removed"] == ["disk_white.png"]
+    assert [evt["current"] for evt in data["progressEvents"]] == [1, 2, 3, 4]
+    assert data["abortSummary"]["cancelled"] is True
+    assert data["abortSummary"]["saved"] == 0
+
+
 class _IdOrderParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
@@ -281,7 +443,11 @@ def test_workspace_vertical_order_and_toolbar_button_sequence(
         "toolbar",
         "runBatchBtn",
         "retryFailedBtn",
+        "exportSplitWrap",
         "zipBtn",
+        "exportMenuBtn",
+        "exportMenu",
+        "folderExportBtn",
         "clearQueueBtn",
         "cardGrid",
     ):
@@ -293,8 +459,11 @@ def test_workspace_vertical_order_and_toolbar_button_sequence(
     assert ids.index("toolbar") < ids.index("runBatchBtn")
     assert ids.index("runBatchBtn") < ids.index("retryFailedBtn")
     assert ids.index("retryFailedBtn") < ids.index("zipBtn")
-    assert ids.index("zipBtn") < ids.index("clearQueueBtn")
+    assert ids.index("zipBtn") < ids.index("exportMenuBtn")
+    assert ids.index("exportMenuBtn") < ids.index("clearQueueBtn")
     assert ids.index("clearQueueBtn") < ids.index("cardGrid")
+    assert "hidden" in by_id["exportMenuBtn"][1]
+    assert "hidden" in by_id["exportMenu"][1]
 
     clear_classes = (by_id["clearQueueBtn"][1].get("class") or "").split()
     assert "btn-danger" not in clear_classes
@@ -360,4 +529,19 @@ def test_inline_script_has_valid_javascript_syntax(
         )
         assert completed.returncode == 0, (
             f"Inline script #{idx} syntax error: {completed.stderr}"
+        )
+
+
+@pytest.mark.node
+def test_static_javascript_files_have_valid_syntax() -> None:
+    for filename in ("ui_logic.js", "studio.js"):
+        script_path = STATIC_DIR / filename
+        completed = subprocess.run(
+            ["node", "--check", str(script_path)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert completed.returncode == 0, (
+            f"{filename} syntax error: {completed.stderr}"
         )

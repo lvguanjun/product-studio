@@ -17,10 +17,29 @@
     stopRequested,
     generationDisabled,
     apiConfigured,
+    supportsFolderExport = false,
+    isExporting = false,
   }) {
     const runnable = pendingCount + errorCount;
     const retryFailedVisible = errorCount > 0 && !isBatchRunning;
-    const zipDisabled = doneCount === 0;
+    const exportMode = doneCount === 1 ? "single" : "zip";
+    const exportLabel = doneCount === 1 ? "下载图片 (1 张)" : "打包下载 ZIP";
+    const zipDisabled = doneCount === 0 || isExporting;
+    const exportSplitVisible = Boolean(supportsFolderExport && doneCount >= 2);
+    const exportSplitDisabled = doneCount < 2 || isExporting;
+
+    function buildExportState(variant) {
+      return {
+        zipButton: {
+          variant,
+          disabled: zipDisabled,
+          mode: exportMode,
+          label: exportLabel,
+        },
+        exportSplitVisible,
+        exportSplitDisabled,
+      };
+    }
 
     if (isBatchRunning) {
       return {
@@ -31,10 +50,7 @@
             ? "正在停止..."
             : `停止剩余任务 (${doneCount}/${total})`,
         },
-        zipButton: {
-          variant: "secondary",
-          disabled: zipDisabled,
-        },
+        ...buildExportState("secondary"),
         retryFailedVisible,
       };
     }
@@ -46,10 +62,7 @@
           disabled: true,
           label: !apiConfigured ? "未检测到 API_KEY" : "余额不足，已禁用生图",
         },
-        zipButton: {
-          variant: doneCount > 0 ? "primary" : "secondary",
-          disabled: zipDisabled,
-        },
+        ...buildExportState(doneCount > 0 ? "primary" : "secondary"),
         retryFailedVisible,
       };
     }
@@ -61,10 +74,7 @@
           disabled: true,
           label: `生成中... (${runningCount} 张)`,
         },
-        zipButton: {
-          variant: "secondary",
-          disabled: zipDisabled,
-        },
+        ...buildExportState("secondary"),
         retryFailedVisible,
       };
     }
@@ -77,10 +87,7 @@
           disabled: false,
           label: `重新生成全部 (${total} 张)`,
         },
-        zipButton: {
-          variant: "primary",
-          disabled: false,
-        },
+        ...buildExportState("primary"),
         retryFailedVisible,
       };
     }
@@ -94,10 +101,7 @@
             ? `开始批量生成 (${runnable} 张待处理)`
             : "请先上传图片",
       },
-      zipButton: {
-        variant: "secondary",
-        disabled: zipDisabled,
-      },
+      ...buildExportState("secondary"),
       retryFailedVisible,
     };
   }
@@ -204,6 +208,166 @@
     return msg.length > 160 ? msg.slice(0, 160) + "…" : msg;
   }
 
+  const INTERNAL_ID_PREFIX_RE = /^[0-9a-f]{12}_(.+)$/i;
+
+  function basenameOf(rawName) {
+    const text = String(rawName || "").trim();
+    if (!text) return "";
+    const parts = text.split(/[\\/]/);
+    return parts[parts.length - 1] || "";
+  }
+
+  function deriveExportFilename(itemOrFilename) {
+    if (itemOrFilename && typeof itemOrFilename === "object") {
+      const explicit = basenameOf(itemOrFilename.export_filename);
+      if (explicit) return explicit;
+      return deriveExportFilename(itemOrFilename.filename);
+    }
+    const safeName = basenameOf(itemOrFilename);
+    if (!safeName) return "product_white.png";
+    const matched = INTERNAL_ID_PREFIX_RE.exec(safeName);
+    return matched ? matched[1] : safeName;
+  }
+
+  function allocateUniqueExportFilename(desiredName, usedLowerNames) {
+    const safeName = basenameOf(desiredName) || "product_white.png";
+    const lower = safeName.toLowerCase();
+    if (!usedLowerNames.has(lower)) {
+      usedLowerNames.add(lower);
+      return safeName;
+    }
+    const dotIndex = safeName.lastIndexOf(".");
+    const stem = dotIndex > 0 ? safeName.slice(0, dotIndex) : safeName;
+    const ext = dotIndex > 0 ? safeName.slice(dotIndex) : "";
+    let counter = 2;
+    while (true) {
+      const candidate = `${stem}_${counter}${ext}`;
+      const candidateLower = candidate.toLowerCase();
+      if (!usedLowerNames.has(candidateLower)) {
+        usedLowerNames.add(candidateLower);
+        return candidate;
+      }
+      counter += 1;
+    }
+  }
+
+  function planBatchExportNames(items, existingNames = []) {
+    const usedLowerNames = new Set();
+    for (const existing of existingNames || []) {
+      const safe = basenameOf(existing);
+      if (safe) usedLowerNames.add(safe.toLowerCase());
+    }
+    return (items || []).map((item) => {
+      const source = item && item.result ? item.result : item;
+      const desired = deriveExportFilename(source);
+      const exportName = allocateUniqueExportFilename(desired, usedLowerNames);
+      return { item, exportName };
+    });
+  }
+
+  async function readExistingDirectoryNames(dirHandle) {
+    const existing = [];
+    if (dirHandle && typeof dirHandle.keys === "function") {
+      for await (const name of dirHandle.keys()) {
+        existing.push(name);
+      }
+      return existing;
+    }
+    if (dirHandle && typeof dirHandle.entries === "function") {
+      for await (const [name] of dirHandle.entries()) {
+        existing.push(name);
+      }
+    }
+    return existing;
+  }
+
+  async function exportItemsToDirectory(items, { pickDirectory, fetchBlob, onProgress }) {
+    const list = Array.isArray(items) ? items : [];
+    if (list.length === 0) {
+      return {
+        cancelled: false,
+        saved: 0,
+        failed: 0,
+        total: 0,
+        folderName: "",
+        savedNames: [],
+        errors: [],
+      };
+    }
+
+    let dirHandle;
+    try {
+      dirHandle = await pickDirectory();
+    } catch (err) {
+      if (err && err.name === "AbortError") {
+        return {
+          cancelled: true,
+          saved: 0,
+          failed: 0,
+          total: list.length,
+          folderName: "",
+          savedNames: [],
+          errors: [],
+        };
+      }
+      throw err;
+    }
+
+    const existingNames = await readExistingDirectoryNames(dirHandle);
+    const planned = planBatchExportNames(list, existingNames);
+    const savedNames = [];
+    const errors = [];
+    let saved = 0;
+    let failed = 0;
+
+    for (let index = 0; index < planned.length; index += 1) {
+      const { item, exportName } = planned[index];
+      if (typeof onProgress === "function") {
+        onProgress({ current: index + 1, total: planned.length, exportName });
+      }
+      let writable = null;
+      let fileCreated = false;
+      try {
+        const blob = await fetchBlob(item);
+        const fileHandle = await dirHandle.getFileHandle(exportName, { create: true });
+        fileCreated = true;
+        writable = await fileHandle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        writable = null;
+        saved += 1;
+        savedNames.push(exportName);
+      } catch (err) {
+        if (writable && typeof writable.abort === "function") {
+          try {
+            await writable.abort();
+          } catch {
+            // ignore cleanup errors
+          }
+        }
+        if (fileCreated && typeof dirHandle.removeEntry === "function") {
+          try {
+            await dirHandle.removeEntry(exportName);
+          } catch {
+            // ignore cleanup errors
+          }
+        }
+        failed += 1;
+        errors.push({ exportName, message: err && err.message ? err.message : "写入失败" });
+      }
+    }
+
+    return {
+      cancelled: false,
+      saved,
+      failed,
+      total: planned.length,
+      folderName: (dirHandle && dirHandle.name) || "",
+      savedNames,
+      errors,
+    };
+  }
+
   return {
     computeToolbarState,
     isPromptModified,
@@ -214,5 +378,8 @@
     estimateBatchCostUsd,
     formatPreprocessTags,
     formatFriendlyError,
+    deriveExportFilename,
+    planBatchExportNames,
+    exportItemsToDirectory,
   };
 });

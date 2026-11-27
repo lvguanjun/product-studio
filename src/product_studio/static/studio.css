@@ -953,6 +953,90 @@ textarea:focus, select:focus, input[type="text"]:focus {
   flex-wrap: wrap;
 }
 
+.split-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.split-btn.has-split > #zipBtn {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.split-btn-toggle {
+  padding: 8px 9px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left-color: rgba(28, 25, 23, 0.14);
+  margin-left: -1px;
+}
+
+.split-btn-toggle.btn-primary {
+  border-left-color: rgba(255, 255, 255, 0.28);
+}
+
+.split-btn-toggle[hidden] {
+  display: none !important;
+}
+
+.split-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 236px;
+  padding: 6px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-float);
+  z-index: 60;
+}
+
+.split-menu[hidden] {
+  display: none !important;
+}
+
+.split-menu-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.split-menu-item:hover:not(:disabled),
+.split-menu-item:focus-visible {
+  background: var(--surface-muted);
+  outline: none;
+}
+
+.split-menu-item:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.split-menu-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.split-menu-desc {
+  font-size: 11px;
+  color: var(--text-3);
+  line-height: 1.4;
+}
+
 .inspect-bar {
   display: flex;
   align-items: center;
@@ -1737,6 +1821,18 @@ body[data-inspect-bg="dark"] .img-pane.result-pane .placeholder-state {
   .toolbar-actions .btn {
     flex: 1 1 auto;
     min-height: 42px;
+  }
+
+  .toolbar-actions .split-btn {
+    flex: 1 1 auto;
+  }
+
+  .toolbar-actions .split-btn > #zipBtn {
+    flex: 1 1 auto;
+  }
+
+  .toolbar-actions .split-btn-toggle {
+    flex: 0 0 auto;
   }
 
   .btn, .btn-sm {

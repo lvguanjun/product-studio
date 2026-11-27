@@ -3,6 +3,7 @@ import binascii
 import io
 import json
 import os
+import re
 import secrets
 import time
 import uuid
@@ -46,6 +47,39 @@ STATIC_DIR = PACKAGE_DIR / "static"
 HEALTHZ_PATH = "/healthz"
 
 DEFAULT_GATEWAY_URL = "https://api.openai.com/v1"
+
+INTERNAL_ID_PREFIX_RE = re.compile(r"^[0-9a-f]{12}_(.+)$", re.IGNORECASE)
+
+
+def derive_export_filename(stored_filename: str) -> str:
+    safe_name = Path(stored_filename).name
+    if not safe_name:
+        return "product_white.png"
+    matched = INTERNAL_ID_PREFIX_RE.match(safe_name)
+    if matched:
+        return matched.group(1)
+    return safe_name
+
+
+def allocate_unique_export_filename(
+    desired_name: str,
+    used_lower_names: set[str],
+) -> str:
+    safe_name = Path(desired_name).name or "product_white.png"
+    if safe_name.lower() not in used_lower_names:
+        used_lower_names.add(safe_name.lower())
+        return safe_name
+
+    parsed = Path(safe_name)
+    stem = parsed.stem
+    suffix = parsed.suffix
+    counter = 2
+    while True:
+        candidate = f"{stem}_{counter}{suffix}"
+        if candidate.lower() not in used_lower_names:
+            used_lower_names.add(candidate.lower())
+            return candidate
+        counter += 1
 
 PRESETS = [
     {
@@ -436,6 +470,7 @@ async def generate_image(
         or "product"
     )
     saved_name = f"{item_id}_{safe_stem}_white.{ext}"
+    export_name = f"{safe_stem}_white.{ext}"
     output_dir.mkdir(parents=True, exist_ok=True)
     saved_path = output_dir / saved_name
     saved_path.write_bytes(final_bytes)
@@ -449,6 +484,7 @@ async def generate_image(
     meta = {
         "id": item_id,
         "filename": saved_name,
+        "export_filename": export_name,
         "orig_name": file.filename or "image.png",
         "url": f"/api/outputs/{saved_name}",
         "mime": mime_type,
@@ -488,7 +524,7 @@ async def get_output_file(
     target = output_dir / safe_name
     if not target.exists() or not target.is_file():
         raise HTTPException(status_code=404, detail="文件不存在")
-    return FileResponse(target, filename=safe_name)
+    return FileResponse(target, filename=derive_export_filename(safe_name))
 
 
 @router.get("/api/history")
@@ -506,6 +542,10 @@ async def list_history(
                     cost_usd, cost_source = resolve_record_cost(record)
                     record["cost_usd"] = cost_usd
                     record["cost_source"] = cost_source
+                if not record.get("export_filename"):
+                    record["export_filename"] = derive_export_filename(
+                        str(record.get("filename", ""))
+                    )
                 records.append(record)
         except (OSError, ValueError, TypeError, AttributeError):
             continue
@@ -527,12 +567,17 @@ async def download_zip(
 
     zip_buffer = io.BytesIO()
     added_count = 0
+    used_lower_names: set[str] = set()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         for raw_name in body.filenames:
             safe_name = Path(raw_name).name
             file_path = output_dir / safe_name
             if file_path.exists() and file_path.is_file():
-                archive.write(file_path, arcname=safe_name)
+                export_name = allocate_unique_export_filename(
+                    derive_export_filename(safe_name),
+                    used_lower_names,
+                )
+                archive.write(file_path, arcname=export_name)
                 added_count += 1
 
     if added_count == 0:
