@@ -7,12 +7,23 @@ import secrets
 import time
 import uuid
 import zipfile
+from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any, cast
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import (
+    APIRouter,
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    Response,
+    UploadFile,
+)
 from fastapi.responses import (
     FileResponse,
     JSONResponse,
@@ -23,22 +34,15 @@ from fastapi.staticfiles import StaticFiles
 from PIL import Image, ImageEnhance, ImageOps
 from pydantic import BaseModel
 
-from balance import (
+from product_studio.balance import (
     BalanceLedger,
     calculate_generation_cost,
     compute_key_fingerprint,
     resolve_record_cost,
 )
 
-APP_DIR = Path(__file__).resolve().parent
-ROOT_DIR = APP_DIR.parent
-STATIC_DIR = APP_DIR / "static"
-OUTPUT_DIR = APP_DIR / "outputs"
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-balance_ledger = BalanceLedger(OUTPUT_DIR)
-
-load_dotenv(ROOT_DIR / ".env")
-load_dotenv(APP_DIR / ".env", override=True)
+PACKAGE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = PACKAGE_DIR / "static"
 
 DEFAULT_GATEWAY_URL = "https://api.openai.com/v1"
 
@@ -121,8 +125,28 @@ MODELS = [
     },
 ]
 
-app = FastAPI(title="速卖通白底主图批量工作室")
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+router = APIRouter()
+
+
+def load_local_env() -> bool:
+    return load_dotenv(Path.cwd() / ".env", override=False)
+
+
+def resolve_output_dir(output_dir: Path | None = None) -> Path:
+    if output_dir is not None:
+        return Path(output_dir)
+    env_dir = (os.getenv("OUTPUT_DIR") or "").strip()
+    if env_dir:
+        return Path(env_dir)
+    return Path.cwd() / "outputs"
+
+
+def get_output_dir(request: Request) -> Path:
+    return cast(Path, request.app.state.output_dir)
+
+
+def get_balance_ledger(request: Request) -> BalanceLedger:
+    return cast(BalanceLedger, request.app.state.balance_ledger)
 
 
 def get_access_key() -> str:
@@ -148,8 +172,10 @@ def verify_basic_auth(auth_header: str | None, expected_key: str) -> bool:
     return bool(username_matches & password_matches)
 
 
-@app.middleware("http")
-async def basic_auth_middleware(request: Request, call_next):
+async def basic_auth_middleware(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
     expected_key = get_access_key()
     if not expected_key:
         return PlainTextResponse(
@@ -160,7 +186,9 @@ async def basic_auth_middleware(request: Request, call_next):
         return PlainTextResponse(
             "Unauthorized",
             status_code=401,
-            headers={"WWW-Authenticate": 'Basic realm="Product Studio", charset="UTF-8"'},
+            headers={
+                "WWW-Authenticate": 'Basic realm="Product Studio", charset="UTF-8"'
+            },
         )
     return await call_next(request)
 
@@ -177,8 +205,9 @@ def preprocess_image(
     max_input_edge: int = 1024,
     enhance_small: bool = True,
 ) -> tuple[bytes, dict[str, Any]]:
-    image = Image.open(io.BytesIO(raw_bytes))
-    image = ImageOps.exif_transpose(image)
+    opened_image: Image.Image = Image.open(io.BytesIO(raw_bytes))
+    transposed = ImageOps.exif_transpose(opened_image)
+    image: Image.Image = transposed if transposed is not None else opened_image
     orig_width, orig_height = image.size
     actions: list[str] = []
 
@@ -231,7 +260,7 @@ def postprocess_output(
     export_size: str = "native",
     export_format: str = "png",
 ) -> tuple[bytes, str, str, str]:
-    image = Image.open(io.BytesIO(raw_bytes))
+    image: Image.Image = Image.open(io.BytesIO(raw_bytes))
     if image.mode != "RGB":
         white_canvas = Image.new("RGB", image.size, (255, 255, 255))
         rgba_image = image.convert("RGBA")
@@ -257,15 +286,17 @@ def postprocess_output(
     return buffer.getvalue(), "png", "image/png", final_dims
 
 
-@app.get("/")
+@router.get("/")
 async def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
 
-@app.get("/api/config")
-async def get_config() -> JSONResponse:
+@router.get("/api/config")
+async def get_config(
+    ledger: Annotated[BalanceLedger, Depends(get_balance_ledger)],
+) -> JSONResponse:
     api_key, base_url = get_api_config()
-    balance = balance_ledger.get_status(api_key)
+    balance = ledger.get_status(api_key)
     return JSONResponse(
         {
             "api_configured": bool(api_key),
@@ -279,24 +310,28 @@ async def get_config() -> JSONResponse:
     )
 
 
-@app.get("/api/balance")
-async def get_balance() -> JSONResponse:
+@router.get("/api/balance")
+async def get_balance(
+    ledger: Annotated[BalanceLedger, Depends(get_balance_ledger)],
+) -> JSONResponse:
     api_key, _ = get_api_config()
-    return JSONResponse(balance_ledger.get_status(api_key))
+    return JSONResponse(ledger.get_status(api_key))
 
 
-@app.post("/api/generate")
+@router.post("/api/generate")
 async def generate_image(
-    file: UploadFile = File(...),
-    prompt: str = Form(...),
-    model: str = Form("gpt-image-2.5-sunburst"),
-    quality: str = Form("medium"),
-    size: str = Form("1024x1024"),
-    export_size: str = Form("1000x1000"),
-    export_format: str = Form("png"),
-    auto_crop_screenshot: bool = Form(True),
-    max_input_edge: int = Form(1024),
-    enhance_small: bool = Form(True),
+    file: Annotated[UploadFile, File()],
+    prompt: Annotated[str, Form()],
+    output_dir: Annotated[Path, Depends(get_output_dir)],
+    ledger: Annotated[BalanceLedger, Depends(get_balance_ledger)],
+    model: Annotated[str, Form()] = "gpt-image-2.5-sunburst",
+    quality: Annotated[str, Form()] = "medium",
+    size: Annotated[str, Form()] = "1024x1024",
+    export_size: Annotated[str, Form()] = "1000x1000",
+    export_format: Annotated[str, Form()] = "png",
+    auto_crop_screenshot: Annotated[bool, Form()] = True,
+    max_input_edge: Annotated[int, Form()] = 1024,
+    enhance_small: Annotated[bool, Form()] = True,
 ) -> JSONResponse:
     api_key, base_url = get_api_config()
     if not api_key:
@@ -304,7 +339,7 @@ async def generate_image(
             status_code=500, detail="未在 .env 中检测到 API_KEY 或 OPENAI_API_KEY"
         )
 
-    current_balance = balance_ledger.get_status(api_key)
+    current_balance = ledger.get_status(api_key)
     if current_balance["disabled"]:
         return JSONResponse(
             status_code=402,
@@ -367,7 +402,7 @@ async def generate_image(
                     if isinstance(err_obj, dict)
                     else str(err_obj)
                 )
-        except Exception:
+        except ValueError:
             pass
         raise HTTPException(
             status_code=response.status_code,
@@ -386,11 +421,15 @@ async def generate_image(
 
     item_id = uuid.uuid4().hex[:12]
     orig_stem = Path(file.filename or "product").stem[:40]
-    safe_stem = "".join(
-        ch if (ch.isalnum() or ch in ("-", "_", ".")) else "_" for ch in orig_stem
-    ).strip("_") or "product"
+    safe_stem = (
+        "".join(
+            ch if (ch.isalnum() or ch in ("-", "_", ".")) else "_" for ch in orig_stem
+        ).strip("_")
+        or "product"
+    )
     saved_name = f"{item_id}_{safe_stem}_white.{ext}"
-    saved_path = OUTPUT_DIR / saved_name
+    output_dir.mkdir(parents=True, exist_ok=True)
+    saved_path = output_dir / saved_name
     saved_path.write_bytes(final_bytes)
 
     elapsed = round(time.time() - started_at, 2)
@@ -417,11 +456,11 @@ async def generate_image(
         "preprocess": preprocess_report,
         "created_at": created_at,
     }
-    (OUTPUT_DIR / f"{item_id}.json").write_text(
+    (output_dir / f"{item_id}.json").write_text(
         json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
     )
 
-    updated_balance = balance_ledger.record_charge(
+    updated_balance = ledger.record_charge(
         api_key,
         item_id=item_id,
         model=model,
@@ -432,29 +471,35 @@ async def generate_image(
     return JSONResponse({**meta, "balance": updated_balance})
 
 
-@app.get("/api/outputs/{filename}")
-async def get_output_file(filename: str) -> FileResponse:
+@router.get("/api/outputs/{filename}")
+async def get_output_file(
+    filename: str,
+    output_dir: Annotated[Path, Depends(get_output_dir)],
+) -> FileResponse:
     safe_name = Path(filename).name
-    target = OUTPUT_DIR / safe_name
+    target = output_dir / safe_name
     if not target.exists() or not target.is_file():
         raise HTTPException(status_code=404, detail="文件不存在")
     return FileResponse(target, filename=safe_name)
 
 
-@app.get("/api/history")
-async def list_history(limit: int = 40) -> JSONResponse:
+@router.get("/api/history")
+async def list_history(
+    output_dir: Annotated[Path, Depends(get_output_dir)],
+    limit: int = 40,
+) -> JSONResponse:
     records: list[dict[str, Any]] = []
-    for meta_file in OUTPUT_DIR.glob("*.json"):
+    for meta_file in output_dir.glob("*.json"):
         try:
             record = json.loads(meta_file.read_text(encoding="utf-8"))
-            img_path = OUTPUT_DIR / Path(record.get("filename", "")).name
+            img_path = output_dir / Path(record.get("filename", "")).name
             if img_path.exists():
                 if "cost_usd" not in record:
                     cost_usd, cost_source = resolve_record_cost(record)
                     record["cost_usd"] = cost_usd
                     record["cost_source"] = cost_source
                 records.append(record)
-        except Exception:
+        except (OSError, ValueError, TypeError, AttributeError):
             continue
     records.sort(key=lambda item: item.get("created_at", 0), reverse=True)
     return JSONResponse({"items": records[:limit]})
@@ -464,8 +509,11 @@ class ZipRequest(BaseModel):
     filenames: list[str]
 
 
-@app.post("/api/download-zip")
-async def download_zip(body: ZipRequest) -> StreamingResponse:
+@router.post("/api/download-zip")
+async def download_zip(
+    body: ZipRequest,
+    output_dir: Annotated[Path, Depends(get_output_dir)],
+) -> StreamingResponse:
     if not body.filenames:
         raise HTTPException(status_code=400, detail="没有可打包的文件")
 
@@ -474,7 +522,7 @@ async def download_zip(body: ZipRequest) -> StreamingResponse:
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         for raw_name in body.filenames:
             safe_name = Path(raw_name).name
-            file_path = OUTPUT_DIR / safe_name
+            file_path = output_dir / safe_name
             if file_path.exists() and file_path.is_file():
                 archive.write(file_path, arcname=safe_name)
                 added_count += 1
@@ -491,3 +539,26 @@ async def download_zip(body: ZipRequest) -> StreamingResponse:
             "Content-Disposition": f'attachment; filename="aliexpress_white_bg_{stamp}.zip"'
         },
     )
+
+
+def create_app(
+    *,
+    output_dir: Path | None = None,
+    ledger: BalanceLedger | None = None,
+    load_env: bool = True,
+) -> FastAPI:
+    if load_env:
+        load_local_env()
+
+    resolved_output_dir = resolve_output_dir(output_dir)
+    resolved_ledger = (
+        ledger if ledger is not None else BalanceLedger(resolved_output_dir)
+    )
+
+    app = FastAPI(title="速卖通白底主图批量工作室")
+    app.state.output_dir = resolved_output_dir
+    app.state.balance_ledger = resolved_ledger
+    app.middleware("http")(basic_auth_middleware)
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+    app.include_router(router)
+    return app

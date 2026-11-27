@@ -5,7 +5,7 @@ import os
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -112,13 +112,15 @@ def resolve_billing_period(now: datetime, timezone_name: str) -> BillingPeriod:
         resolved_name = DEFAULT_BILLING_TIMEZONE
         tz = ZoneInfo(DEFAULT_BILLING_TIMEZONE)
 
-    aware_now = now if now.tzinfo is not None else now.replace(tzinfo=timezone.utc)
+    aware_now = now if now.tzinfo is not None else now.replace(tzinfo=UTC)
     local_now = aware_now.astimezone(tz)
     period_start = datetime(local_now.year, local_now.month, 1, 0, 0, 0, tzinfo=tz)
     if local_now.month == 12:
         next_reset = datetime(local_now.year + 1, 1, 1, 0, 0, 0, tzinfo=tz)
     else:
-        next_reset = datetime(local_now.year, local_now.month + 1, 1, 0, 0, 0, tzinfo=tz)
+        next_reset = datetime(
+            local_now.year, local_now.month + 1, 1, 0, 0, 0, tzinfo=tz
+        )
 
     return BillingPeriod(
         month=f"{local_now.year:04d}-{local_now.month:02d}",
@@ -184,7 +186,9 @@ def resolve_record_cost(record: dict[str, Any]) -> tuple[float, CostSource]:
         raw_source = str(record.get("cost_source") or "usage")
         source: CostSource = "fallback" if raw_source == "fallback" else "usage"
         return round(float(raw_cost), 6), source
-    return calculate_generation_cost(str(record.get("model") or ""), record.get("usage"))
+    return calculate_generation_cost(
+        str(record.get("model") or ""), record.get("usage")
+    )
 
 
 def _sum_entries_cost(entries: list[dict[str, Any]]) -> float:
@@ -202,7 +206,7 @@ class BalanceLedger:
         self._outputs_dir = Path(outputs_dir)
         self._ledger_dir = self._outputs_dir / ".balance"
         self._config_loader = config_loader
-        self._now_fn = now_fn or (lambda: datetime.now(timezone.utc))
+        self._now_fn = now_fn or (lambda: datetime.now(UTC))
         self._lock = threading.Lock()
 
     def _bucket_path(self, key_fp: str, billing_month: str) -> Path:
@@ -219,14 +223,16 @@ class BalanceLedger:
         )
         os.replace(temp_path, path)
 
-    def _load_or_init_bucket(self, key_fp: str, period: BillingPeriod) -> dict[str, Any]:
+    def _load_or_init_bucket(
+        self, key_fp: str, period: BillingPeriod
+    ) -> dict[str, Any]:
         bucket_path = self._bucket_path(key_fp, period.month)
         if bucket_path.exists():
             try:
                 loaded = json.loads(bucket_path.read_text(encoding="utf-8"))
                 if isinstance(loaded, dict) and isinstance(loaded.get("entries"), list):
                     return loaded
-            except Exception:
+            except (OSError, ValueError):
                 pass
 
         other_month_ledgers = (
@@ -246,7 +252,7 @@ class BalanceLedger:
             for meta_file in sorted(self._outputs_dir.glob("*.json")):
                 try:
                     record = json.loads(meta_file.read_text(encoding="utf-8"))
-                except Exception:
+                except (OSError, ValueError):
                     continue
                 if not isinstance(record, dict):
                     continue
