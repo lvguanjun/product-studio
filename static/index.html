@@ -125,9 +125,33 @@
       cursor: help;
     }
 
+    .settings-btn {
+      position: relative;
+    }
+
+    .settings-btn.has-custom {
+      border-color: #bfdbfe;
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .dirty-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: inline-block;
+    }
+
+    .dirty-dot[hidden],
+    .pill[hidden],
+    .modified-badge[hidden] {
+      display: none !important;
+    }
+
     .balance-banner {
       display: none;
-      max-width: 1480px;
+      max-width: 1240px;
       margin: 14px auto 0;
       padding: 10px 24px 0;
     }
@@ -158,17 +182,9 @@
     }
 
     main {
-      max-width: 1480px;
+      max-width: 1240px;
       margin: 0 auto;
-      padding: 20px 24px 48px;
-      display: grid;
-      grid-template-columns: 380px 1fr;
-      gap: 20px;
-      align-items: start;
-    }
-
-    @media (max-width: 1024px) {
-      main { grid-template-columns: 1fr; }
+      padding: 18px 24px 56px;
     }
 
     .panel {
@@ -178,15 +194,65 @@
       box-shadow: var(--shadow-sm);
     }
 
-    .sidebar {
-      position: sticky;
-      top: 76px;
-      padding: 18px;
+    .prompt-panel {
+      padding: 16px 18px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      max-height: calc(100vh - 96px);
-      overflow-y: auto;
+      gap: 12px;
+    }
+
+    .preset-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .preset-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .preset-active-desc {
+      font-size: 12px;
+      color: var(--text-3);
+    }
+
+    .preset-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .preset-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text-2);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .preset-pill:hover {
+      border-color: var(--accent);
+      color: var(--text);
+      background: var(--surface-muted);
+    }
+
+    .preset-pill.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 600;
+      box-shadow: 0 0 0 1px var(--accent) inset;
     }
 
     .section-title {
@@ -205,71 +271,59 @@
       font-size: 11px;
     }
 
-    .preset-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 8px;
-    }
-
-    .preset-card {
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 12px;
-      background: var(--surface);
-      cursor: pointer;
-      transition: all 0.15s ease;
-      position: relative;
-    }
-
-    .preset-card:hover {
-      border-color: var(--border-strong);
-      background: var(--surface-muted);
-    }
-
-    .preset-card.active {
-      border-color: var(--accent);
-      background: var(--accent-soft);
-      box-shadow: 0 0 0 1px var(--accent) inset;
-    }
-
-    .preset-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-    }
-
-    .preset-name {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text);
-    }
-
-    .preset-tag {
-      font-size: 11px;
-      color: var(--accent);
-      background: rgba(37, 99, 235, 0.08);
-      padding: 1px 7px;
-      border-radius: 999px;
-      white-space: nowrap;
-    }
-
-    .preset-desc {
-      margin-top: 4px;
-      font-size: 12px;
-      color: var(--text-3);
-    }
-
     .preset-del {
       border: none;
       background: transparent;
       color: var(--text-3);
       cursor: pointer;
       font-size: 14px;
-      padding: 0 4px;
+      line-height: 1;
+      padding: 0 2px;
     }
 
     .preset-del:hover { color: var(--danger); }
+
+    .prompt-editor-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+
+    .prompt-editor-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-2);
+    }
+
+    .modified-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 1px 7px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--warn-soft);
+      border: 1px solid #fde68a;
+      color: var(--warn);
+    }
+
+    .prompt-editor-tools {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .prompt-char-count {
+      font-size: 11px;
+      color: var(--text-3);
+    }
 
     textarea, select, input[type="text"] {
       width: 100%;
@@ -290,16 +344,9 @@
     }
 
     textarea {
-      min-height: 112px;
+      min-height: 72px;
       resize: vertical;
       line-height: 1.5;
-    }
-
-    .prompt-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 6px;
-      justify-content: space-between;
     }
 
     .form-grid {
@@ -388,6 +435,18 @@
       background: #fee2e2;
     }
 
+    .btn-subtle-danger {
+      background: transparent;
+      border-color: var(--border);
+      color: var(--text-2);
+    }
+
+    .btn-subtle-danger:hover:not(:disabled) {
+      background: var(--danger-soft);
+      border-color: #fecaca;
+      color: var(--danger);
+    }
+
     .btn-sm {
       padding: 5px 10px;
       font-size: 12px;
@@ -444,12 +503,18 @@
     }
 
     .toolbar {
+      position: sticky;
+      top: 72px;
+      z-index: 15;
       padding: 14px 18px;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(8px);
+      box-shadow: var(--shadow-md);
     }
 
     .stats {
@@ -487,7 +552,7 @@
 
     .card-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
       gap: 16px;
     }
 
@@ -670,6 +735,85 @@
 
     .modal-backdrop.open { display: flex; }
 
+    .drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(2px);
+      z-index: 90;
+      display: flex;
+      justify-content: flex-end;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.2s ease, visibility 0.2s ease;
+    }
+
+    .drawer-backdrop.open {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .drawer-panel {
+      width: 100%;
+      max-width: 400px;
+      height: 100%;
+      background: var(--surface);
+      box-shadow: -8px 0 30px rgba(15, 23, 42, 0.16);
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.22s ease;
+    }
+
+    .drawer-backdrop.open .drawer-panel {
+      transform: translateX(0);
+    }
+
+    .drawer-head {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .drawer-head h2 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .drawer-body {
+      padding: 18px 20px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .drawer-note {
+      margin: 0;
+      font-size: 12px;
+      color: var(--text-3);
+      background: var(--surface-muted);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 11px;
+    }
+
+    .drawer-foot {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
     .modal-box {
       background: var(--surface);
       border-radius: 14px;
@@ -792,7 +936,7 @@
       <div class="brand-icon">白</div>
       <div>
         <h1>速卖通白底主图 · 批量工作室</h1>
-        <p>智能预处理 + Cloudflare AI Gateway (GPT Image 2.5)</p>
+        <p>一键批量生成标准白底主图，保留商品细节与文字</p>
       </div>
     </div>
     <div class="header-right">
@@ -801,7 +945,11 @@
         <button class="tab-btn" id="tabHistory" onclick="switchTab('history')">历史生成</button>
       </div>
       <span class="pill balance-pill" id="balanceStatus" title="正在读取余额..."><span class="dot"></span>余额读取中...</span>
-      <span class="pill" id="gatewayStatus"><span class="dot"></span>检测网关...</span>
+      <span class="pill err" id="gatewayStatus" hidden><span class="dot"></span>服务异常</span>
+      <button class="btn btn-sm settings-btn" id="advancedSettingsBtn" type="button" onclick="openAdvancedDrawer()">
+        ⚙ 高级设置
+        <span class="dirty-dot" id="advancedDirtyDot" hidden title="已修改默认参数"></span>
+      </button>
     </div>
   </header>
 
@@ -810,96 +958,29 @@
   </div>
 
   <main>
-    <aside class="panel sidebar">
-      <div>
-        <div class="section-title">
-          <span>1. 内置场景 Prompt</span>
-          <small>点击套用，支持自定义保存</small>
-        </div>
-        <div class="preset-grid" id="presetGrid"></div>
-      </div>
-
-      <div>
-        <div class="section-title">
-          <span>2. 当前 Prompt（可直接修改）</span>
-          <small id="promptCharCount">0 字</small>
-        </div>
-        <textarea id="promptInput" placeholder="输入或编辑生成指令..."></textarea>
-        <div class="prompt-actions">
-          <button class="btn btn-sm" type="button" onclick="resetPromptToPreset()">恢复当前模板</button>
-          <button class="btn btn-sm" type="button" onclick="saveCustomPreset()">+ 存为我的模板</button>
-        </div>
-      </div>
-
-      <div>
-        <div class="section-title"><span>3. 模型与输出参数</span></div>
-        <div class="form-grid">
-          <div class="field" style="grid-column: span 2;">
-            <label for="modelSelect">生图模型</label>
-            <select id="modelSelect"></select>
-          </div>
-          <div class="field">
-            <label for="qualitySelect">画质档位</label>
-            <select id="qualitySelect">
-              <option value="low">low（快速省钱）</option>
-              <option value="medium" selected>medium（主力推荐）</option>
-              <option value="high">high（最高细节）</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="concurrencySelect">批量并发数</label>
-            <select id="concurrencySelect">
-              <option value="1">1 路串行</option>
-              <option value="2" selected>2 路并发（推荐）</option>
-              <option value="3">3 路并发</option>
-              <option value="4">4 路并发</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="exportSizeSelect">导出尺寸</label>
-            <select id="exportSizeSelect">
-              <option value="1000x1000" selected>1000×1000（速卖通标准）</option>
-              <option value="800x800">800×800（轻量主图）</option>
-              <option value="native">1024×1024（模型原生）</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="exportFormatSelect">导出格式</label>
-            <select id="exportFormatSelect">
-              <option value="png" selected>PNG（无损）</option>
-              <option value="jpg">JPG（体积小）</option>
-              <option value="webp">WEBP</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <div class="section-title"><span>4. 自动预处理（上传前优化）</span></div>
-        <div class="preprocess-box">
-          <label class="check-row">
-            <input type="checkbox" id="optAutoCrop" checked />
-            <span><strong>自动裁取手机长截图上半主图区</strong>（高宽比 &gt; 1.75 时去掉下方价格/评价区，省 Token 且商品文字更清晰）</span>
-          </label>
-          <label class="check-row">
-            <input type="checkbox" id="optMaxEdge" checked />
-            <span><strong>输入长边限 1024px</strong>（避免超高像素截图白烧输入 Token）</span>
-          </label>
-          <label class="check-row">
-            <input type="checkbox" id="optEnhanceSmall" checked />
-            <span><strong>小图轻度锐化增强</strong>（&lt; 650px 截图轻度锐化，提升小字识别率）</span>
-          </label>
-        </div>
-      </div>
-
-      <div>
-        <button class="btn btn-primary btn-block" id="runBatchBtn" onclick="startOrStopBatch()">
-          开始批量生成
-        </button>
-      </div>
-    </aside>
-
     <section class="workspace" id="batchView">
+      <div class="panel prompt-panel">
+        <div class="preset-header">
+          <span class="preset-title">出图场景</span>
+          <span class="preset-active-desc" id="activePresetDesc">选择场景后自动填入提示词，特殊商品可直接修改</span>
+        </div>
+        <div class="preset-pills" id="presetGrid"></div>
+        <div>
+          <div class="prompt-editor-head">
+            <label class="prompt-editor-label" for="promptInput">
+              <span>生成提示词（可直接修改或自己写）</span>
+              <span class="modified-badge" id="promptModifiedBadge" hidden>已修改</span>
+            </label>
+            <div class="prompt-editor-tools">
+              <span class="prompt-char-count" id="promptCharCount">0 字符</span>
+              <button class="btn btn-sm" id="resetPromptBtn" type="button" onclick="resetPromptToPreset()" disabled>恢复默认</button>
+              <button class="btn btn-sm" id="savePresetBtn" type="button" onclick="saveCustomPreset()">+ 存为我的模板</button>
+            </div>
+          </div>
+          <textarea id="promptInput" rows="3" placeholder="可直接使用所选场景的提示词，也可以清空后自己输入特殊要求..."></textarea>
+        </div>
+      </div>
+
       <div class="dropzone" id="dropzone">
         <div>
           <div class="dropzone-title">拖拽多张商品图 / 截图到这里，或点击选择图片</div>
@@ -917,9 +998,10 @@
           </div>
         </div>
         <div class="toolbar-actions">
-          <button class="btn btn-sm" id="retryFailedBtn" onclick="retryFailedItems()" style="display:none;">重试失败项</button>
-          <button class="btn btn-sm btn-primary" id="zipBtn" onclick="downloadAllZip()" disabled>打包下载 ZIP</button>
-          <button class="btn btn-sm btn-danger" onclick="clearQueue()">清空列表</button>
+          <button class="btn btn-primary" id="runBatchBtn" type="button" onclick="startOrStopBatch()">开始批量生成</button>
+          <button class="btn btn-sm" id="retryFailedBtn" type="button" onclick="retryFailedItems()" style="display:none;">重试失败项</button>
+          <button class="btn" id="zipBtn" type="button" onclick="downloadAllZip()" disabled>打包下载 ZIP</button>
+          <button class="btn btn-sm btn-subtle-danger" id="clearQueueBtn" type="button" onclick="clearQueue()">清空列表</button>
         </div>
       </div>
 
@@ -929,7 +1011,7 @@
     <section class="workspace" id="historyView" style="display:none;">
       <div class="panel toolbar">
         <div class="stats">
-          <span>最近生成的成品图（保存在服务端 <code>outputs/</code>）</span>
+          <span>最近生成的白底成品图</span>
         </div>
         <div class="toolbar-actions">
           <button class="btn btn-sm" onclick="loadHistory()">刷新</button>
@@ -939,6 +1021,83 @@
       <div class="card-grid" id="historyGrid"></div>
     </section>
   </main>
+
+  <div class="drawer-backdrop" id="advancedDrawerBackdrop" onclick="if (event.target === this) closeAdvancedDrawer()">
+    <aside class="drawer-panel" id="advancedDrawer" aria-label="高级设置">
+      <div class="drawer-head">
+        <h2>高级设置</h2>
+        <button class="btn btn-sm" type="button" onclick="closeAdvancedDrawer()">关闭</button>
+      </div>
+      <div class="drawer-body">
+        <p class="drawer-note">默认参数已针对速卖通白底主图调优，普通使用无需调整。</p>
+
+        <div>
+          <div class="section-title"><span>模型与输出参数</span></div>
+          <div class="form-grid">
+            <div class="field" style="grid-column: span 2;">
+              <label for="modelSelect">生图模型</label>
+              <select id="modelSelect"></select>
+            </div>
+            <div class="field">
+              <label for="qualitySelect">画质档位</label>
+              <select id="qualitySelect">
+                <option value="low">low（快速省钱）</option>
+                <option value="medium" selected>medium（主力推荐）</option>
+                <option value="high">high（最高细节）</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="concurrencySelect">批量并发数</label>
+              <select id="concurrencySelect">
+                <option value="1">1 路串行</option>
+                <option value="2" selected>2 路并发（推荐）</option>
+                <option value="3">3 路并发</option>
+                <option value="4">4 路并发</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="exportSizeSelect">导出尺寸</label>
+              <select id="exportSizeSelect">
+                <option value="1000x1000" selected>1000×1000（速卖通标准）</option>
+                <option value="800x800">800×800（轻量主图）</option>
+                <option value="native">1024×1024（模型原生）</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="exportFormatSelect">导出格式</label>
+              <select id="exportFormatSelect">
+                <option value="png" selected>PNG（无损）</option>
+                <option value="jpg">JPG（体积小）</option>
+                <option value="webp">WEBP</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-title"><span>自动预处理（上传前优化）</span></div>
+          <div class="preprocess-box">
+            <label class="check-row">
+              <input type="checkbox" id="optAutoCrop" checked />
+              <span><strong>自动裁取手机长截图上半主图区</strong>（高宽比 &gt; 1.75 时去掉下方价格/评价区，商品文字更清晰）</span>
+            </label>
+            <label class="check-row">
+              <input type="checkbox" id="optMaxEdge" checked />
+              <span><strong>输入长边限 1024px</strong>（避免超高像素截图拖慢处理）</span>
+            </label>
+            <label class="check-row">
+              <input type="checkbox" id="optEnhanceSmall" checked />
+              <span><strong>小图轻度锐化增强</strong>（&lt; 650px 截图轻度锐化，提升小字识别率）</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="drawer-foot">
+        <button class="btn btn-sm" id="resetAdvancedBtn" type="button" onclick="resetAdvancedSettings()">恢复默认设置</button>
+        <button class="btn btn-sm btn-primary" type="button" onclick="closeAdvancedDrawer()">完成</button>
+      </div>
+    </aside>
+  </div>
 
   <div class="modal-backdrop" id="compareModal" onclick="if (event.target === this) closeModal()">
     <div class="modal-box">
@@ -966,8 +1125,38 @@
 
   <div class="toast" id="toast"></div>
 
+  <script src="/static/ui_logic.js"></script>
   <script>
     const CUSTOM_PRESETS_KEY = "product_studio_custom_presets_v1";
+    const UI = window.ProductStudioUI;
+
+    const BUTTON_VARIANT_CLASS = {
+      primary: "btn btn-primary",
+      danger: "btn btn-danger",
+      secondary: "btn",
+    };
+
+    const ADVANCED_FIELDS = [
+      { key: "model", id: "modelSelect", prop: "value" },
+      { key: "quality", id: "qualitySelect", prop: "value" },
+      { key: "concurrency", id: "concurrencySelect", prop: "value" },
+      { key: "exportSize", id: "exportSizeSelect", prop: "value" },
+      { key: "exportFormat", id: "exportFormatSelect", prop: "value" },
+      { key: "autoCrop", id: "optAutoCrop", prop: "checked" },
+      { key: "maxEdge", id: "optMaxEdge", prop: "checked" },
+      { key: "enhanceSmall", id: "optEnhanceSmall", prop: "checked" },
+    ];
+
+    const advancedDefaults = {
+      model: "gpt-image-2.5-sunburst",
+      quality: "medium",
+      concurrency: "2",
+      exportSize: "1000x1000",
+      exportFormat: "png",
+      autoCrop: true,
+      maxEdge: true,
+      enhanceSmall: true,
+    };
 
     let builtInPresets = [];
     let customPresets = [];
@@ -1119,31 +1308,20 @@
       const container = document.getElementById("presetGrid");
       container.innerHTML = "";
       for (const preset of getAllPresets()) {
-        const card = document.createElement("div");
-        card.className = "preset-card" + (preset.id === activePresetId ? " active" : "");
-        card.onclick = () => selectPreset(preset.id);
-
-        const head = document.createElement("div");
-        head.className = "preset-head";
+        const pill = document.createElement("button");
+        pill.type = "button";
+        pill.className = "preset-pill" + (preset.id === activePresetId ? " active" : "");
+        pill.title = preset.description || preset.name;
+        pill.onclick = () => selectPreset(preset.id);
 
         const title = document.createElement("span");
-        title.className = "preset-name";
         title.textContent = preset.name;
-        head.appendChild(title);
-
-        const rightWrap = document.createElement("div");
-        rightWrap.style.display = "flex";
-        rightWrap.style.alignItems = "center";
-        rightWrap.style.gap = "4px";
-
-        const tag = document.createElement("span");
-        tag.className = "preset-tag";
-        tag.textContent = preset.tag || "自定义";
-        rightWrap.appendChild(tag);
+        pill.appendChild(title);
 
         if (preset.custom) {
-          const delBtn = document.createElement("button");
+          const delBtn = document.createElement("span");
           delBtn.className = "preset-del";
+          delBtn.setAttribute("role", "button");
           delBtn.title = "删除模板";
           delBtn.textContent = "×";
           delBtn.onclick = (event) => {
@@ -1157,21 +1335,15 @@
             }
             showToast("已删除自定义模板");
           };
-          rightWrap.appendChild(delBtn);
+          pill.appendChild(delBtn);
         }
 
-        head.appendChild(rightWrap);
-        card.appendChild(head);
-
-        if (preset.description) {
-          const desc = document.createElement("div");
-          desc.className = "preset-desc";
-          desc.textContent = preset.description;
-          card.appendChild(desc);
-        }
-
-        container.appendChild(card);
+        container.appendChild(pill);
       }
+    }
+
+    function getActivePreset() {
+      return getAllPresets().find((item) => item.id === activePresetId) || null;
     }
 
     function selectPreset(presetId) {
@@ -1180,22 +1352,24 @@
       activePresetId = found.id;
       const promptEl = document.getElementById("promptInput");
       promptEl.value = found.prompt;
-      updatePromptCount();
+      const descEl = document.getElementById("activePresetDesc");
+      descEl.textContent = found.description || "可直接修改下方提示词或输入自定义要求";
+      syncPromptEditorState();
       renderPresets();
     }
 
     function resetPromptToPreset() {
       selectPreset(activePresetId);
-      showToast("已恢复模板默认 Prompt");
+      showToast("已恢复当前场景默认提示词");
     }
 
     function saveCustomPreset() {
       const text = document.getElementById("promptInput").value.trim();
       if (!text) {
-        showToast("Prompt 不能为空");
+        showToast("提示词不能为空");
         return;
       }
-      const name = window.prompt("给这个自定义 Prompt 模板起个名字：", "我的电商白底模板");
+      const name = window.prompt("给这个自定义提示词模板起个名字：", "我的白底模板");
       if (!name || !name.trim()) return;
       const newPreset = {
         id: "custom_" + Date.now(),
@@ -1208,13 +1382,67 @@
       customPresets.push(newPreset);
       saveCustomPresetsToStorage();
       activePresetId = newPreset.id;
+      document.getElementById("activePresetDesc").textContent = newPreset.description;
       renderPresets();
+      syncPromptEditorState();
       showToast("已保存自定义模板");
     }
 
-    function updatePromptCount() {
+    function syncPromptEditorState() {
       const text = document.getElementById("promptInput").value;
       document.getElementById("promptCharCount").textContent = `${text.length} 字符`;
+      const activePreset = getActivePreset();
+      const modified = activePreset
+        ? UI.isPromptModified(text, activePreset.prompt)
+        : text.trim().length > 0;
+      document.getElementById("promptModifiedBadge").hidden = !modified;
+      document.getElementById("resetPromptBtn").disabled = !modified || !activePreset;
+    }
+
+    function readAdvancedSettings() {
+      const settings = {};
+      for (const field of ADVANCED_FIELDS) {
+        const el = document.getElementById(field.id);
+        if (field.key === "model" && el.options.length === 0) {
+          settings[field.key] = advancedDefaults.model;
+          continue;
+        }
+        settings[field.key] = el[field.prop];
+      }
+      return settings;
+    }
+
+    function syncAdvancedDirtyIndicator() {
+      const isDirty = UI.hasCustomAdvancedSettings(readAdvancedSettings(), advancedDefaults);
+      document.getElementById("advancedDirtyDot").hidden = !isDirty;
+      document.getElementById("advancedSettingsBtn").classList.toggle("has-custom", isDirty);
+    }
+
+    function resetAdvancedSettings() {
+      for (const field of ADVANCED_FIELDS) {
+        document.getElementById(field.id)[field.prop] = advancedDefaults[field.key];
+      }
+      syncAdvancedDirtyIndicator();
+      showToast("已恢复默认高级设置");
+    }
+
+    function openAdvancedDrawer() {
+      document.getElementById("advancedDrawerBackdrop").classList.add("open");
+    }
+
+    function closeAdvancedDrawer() {
+      document.getElementById("advancedDrawerBackdrop").classList.remove("open");
+    }
+
+    function setGatewayError(message) {
+      const statusEl = document.getElementById("gatewayStatus");
+      if (!message) {
+        statusEl.hidden = true;
+        return;
+      }
+      statusEl.className = "pill err";
+      statusEl.innerHTML = `<span class="dot"></span>${escapeHtml(message)}`;
+      statusEl.hidden = false;
     }
 
     async function initApp() {
@@ -1223,23 +1451,22 @@
         const response = await fetch("/api/config");
         const config = await response.json();
         builtInPresets = config.presets || [];
+        if (config.default_model) advancedDefaults.model = config.default_model;
+        if (config.default_quality) advancedDefaults.quality = config.default_quality;
+
         const modelSelect = document.getElementById("modelSelect");
         modelSelect.innerHTML = "";
         for (const modelInfo of config.models || []) {
           const option = document.createElement("option");
           option.value = modelInfo.id;
           option.textContent = modelInfo.label;
-          if (modelInfo.id === config.default_model) option.selected = true;
+          if (modelInfo.id === advancedDefaults.model) option.selected = true;
           modelSelect.appendChild(option);
         }
-        const statusEl = document.getElementById("gatewayStatus");
-        if (config.api_configured) {
-          statusEl.className = "pill ok";
-          statusEl.innerHTML = `<span class="dot"></span>CF 网关已就绪`;
-        } else {
-          statusEl.className = "pill err";
-          statusEl.innerHTML = `<span class="dot"></span>未检测到 API_KEY`;
-        }
+        document.getElementById("qualitySelect").value = advancedDefaults.quality;
+        syncAdvancedDirtyIndicator();
+
+        setGatewayError(config.api_configured ? "" : "未检测到 API_KEY");
         if (config.balance) {
           updateBalanceUI(config.balance, { authoritative: true });
         }
@@ -1247,9 +1474,7 @@
           selectPreset(builtInPresets[0].id);
         }
       } catch (err) {
-        const statusEl = document.getElementById("gatewayStatus");
-        statusEl.className = "pill err";
-        statusEl.innerHTML = `<span class="dot"></span>后端连接失败`;
+        setGatewayError("后端连接失败");
         const balanceEl = document.getElementById("balanceStatus");
         balanceEl.className = "pill balance-pill err";
         balanceEl.innerHTML = `<span class="dot"></span>余额读取失败`;
@@ -1300,40 +1525,40 @@
       const runningCount = queueItems.filter((item) => item.status === "running").length;
       const errorCount = queueItems.filter((item) => item.status === "error").length;
       const pendingCount = queueItems.filter((item) => item.status === "pending").length;
-      const totalTokens = queueItems.reduce((sum, item) => sum + ((item.result && item.result.usage && item.result.usage.total_tokens) || 0), 0);
 
       document.getElementById("statsText").innerHTML =
         `<span>共 <strong>${total}</strong> 张</span>` +
         `<span>已完成 <strong style="color:var(--success)">${doneCount}</strong></span>` +
         (runningCount ? `<span>处理中 <strong style="color:var(--accent)">${runningCount}</strong></span>` : "") +
-        (errorCount ? `<span>失败 <strong style="color:var(--danger)">${errorCount}</strong></span>` : "") +
-        (totalTokens ? `<span>累计 Tokens <strong>${totalTokens.toLocaleString()}</strong></span>` : "");
+        (errorCount ? `<span>失败 <strong style="color:var(--danger)">${errorCount}</strong></span>` : "");
 
       const percent = total ? Math.round(((doneCount + errorCount) / total) * 100) : 0;
       document.getElementById("progressBar").style.width = `${percent}%`;
 
       const generationDisabled = isGenerationDisabled();
-      document.getElementById("zipBtn").disabled = doneCount === 0;
+      const toolbarState = UI.computeToolbarState({
+        total,
+        doneCount,
+        pendingCount,
+        runningCount,
+        errorCount,
+        isBatchRunning,
+        stopRequested,
+        generationDisabled,
+        apiConfigured: !(balanceState && !balanceState.configured),
+      });
+
+      const zipBtn = document.getElementById("zipBtn");
+      zipBtn.disabled = toolbarState.zipButton.disabled;
+      zipBtn.className = BUTTON_VARIANT_CLASS[toolbarState.zipButton.variant] || "btn";
+
       const retryFailedBtn = document.getElementById("retryFailedBtn");
-      retryFailedBtn.style.display = errorCount > 0 && !isBatchRunning ? "inline-flex" : "none";
+      retryFailedBtn.style.display = toolbarState.retryFailedVisible ? "inline-flex" : "none";
       retryFailedBtn.disabled = generationDisabled;
 
-      if (isBatchRunning) {
-        runBtn.textContent = stopRequested ? "正在停止..." : `停止剩余任务 (${doneCount}/${total})`;
-        runBtn.className = "btn btn-danger btn-block";
-        runBtn.disabled = false;
-      } else if (generationDisabled) {
-        runBtn.className = "btn btn-primary btn-block";
-        runBtn.disabled = true;
-        runBtn.textContent = balanceState && !balanceState.configured
-          ? "未检测到 API_KEY"
-          : "余额不足，已禁用生图";
-      } else {
-        const runnable = pendingCount + errorCount;
-        runBtn.className = "btn btn-primary btn-block";
-        runBtn.disabled = total === 0;
-        runBtn.textContent = runnable > 0 ? `开始批量生成 (${runnable} 张待处理)` : total > 0 ? `重新生成全部 (${total} 张)` : "请先上传图片";
-      }
+      runBtn.className = BUTTON_VARIANT_CLASS[toolbarState.runButton.variant] || "btn";
+      runBtn.disabled = toolbarState.runButton.disabled;
+      runBtn.textContent = toolbarState.runButton.label;
 
       grid.innerHTML = "";
       for (const item of queueItems) {
@@ -1353,7 +1578,7 @@
           resultHtml = `<img src="${item.result.url}?t=${item.result.created_at}" alt="白底成品" />
                         <span class="pane-label">白底成品</span>`;
         } else if (item.status === "running") {
-          resultHtml = `<div class="placeholder-state"><div class="spinner"></div><span>预处理并生成中...</span></div>`;
+          resultHtml = `<div class="placeholder-state"><div class="spinner"></div><span>正在生成白底图...</span></div>`;
         } else if (item.status === "error") {
           resultHtml = `<div class="placeholder-state"><span style="color:var(--danger);font-weight:600;">生成失败</span><span>可点击下方重试</span></div>`;
         } else {
@@ -1362,20 +1587,11 @@
 
         let metaHtml = "";
         if (item.result) {
-          const pre = item.result.preprocess || {};
-          const actionsText = (pre.actions || []).join(" · ");
-          const usage = item.result.usage || {};
-          const costPart = item.result.cost_usd !== undefined
-            ? ` · 约 ${formatUsd(item.result.cost_usd, 3)}`
-            : "";
-          metaHtml =
-            `<div>预处理：${pre.orig_size || "-"} → ${pre.processed_size || "-"}（${actionsText}）</div>` +
-            `<div>输出：${item.result.output_size} · ${item.result.size_kb} KB · 耗时 ${item.result.elapsed}s` +
-            (usage.total_tokens ? ` · ${usage.total_tokens} tokens` : "") + `${costPart}</div>`;
+          metaHtml = `<div>成品：${escapeHtml(UI.formatResultSummary(item.result))}</div>`;
         } else if (item.error) {
           metaHtml = `<div class="error-msg">${escapeHtml(item.error)}</div>`;
         } else {
-          metaHtml = `<div>文件大小：${(item.file.size / 1024).toFixed(1)} KB</div>`;
+          metaHtml = `<div>原图大小：${(item.file.size / 1024).toFixed(1)} KB</div>`;
         }
 
         card.innerHTML = `
@@ -1424,6 +1640,12 @@
     function clearQueue() {
       if (isBatchRunning) {
         showToast("请先停止正在运行的任务");
+        return;
+      }
+      if (
+        UI.shouldConfirmClearQueue(queueItems) &&
+        !window.confirm("列表中包含已生成的白底图，确定要清空吗？（已生成图片仍可在「历史生成」中查看）")
+      ) {
         return;
       }
       for (const item of queueItems) {
@@ -1587,8 +1809,7 @@
       document.getElementById("modalTitle").textContent = `${item.name} — 拖动滑块对比细节`;
       document.getElementById("modalOrigImg").src = item.previewUrl;
       document.getElementById("modalResultImg").src = `${item.result.url}?t=${item.result.created_at}`;
-      document.getElementById("modalMetaText").textContent =
-        `${item.result.model} (${item.result.quality}) · ${item.result.output_size} · ${item.result.size_kb} KB · 耗时 ${item.result.elapsed}s`;
+      document.getElementById("modalMetaText").textContent = UI.formatResultSummary(item.result);
       const dl = document.getElementById("modalDownloadLink");
       dl.href = item.result.url;
       dl.download = item.result.filename;
@@ -1631,7 +1852,6 @@
         for (const item of historyItems) {
           const card = document.createElement("div");
           card.className = "item-card";
-          const costLabel = item.cost_usd !== undefined ? ` · 约 ${formatUsd(item.cost_usd, 3)}` : "";
           card.innerHTML = `
             <div class="item-header">
               <span class="item-title" title="${escapeHtml(item.orig_name)}">${escapeHtml(item.orig_name)}</span>
@@ -1641,8 +1861,7 @@
               <img src="${item.url}" alt="成品" />
             </div>
             <div class="item-meta">
-              <div>${item.model} (${item.quality}) · ${item.size_kb} KB · ${item.elapsed}s${costLabel}</div>
-              <div>${(item.preprocess && item.preprocess.actions || []).join(" · ")}</div>
+              <div>${escapeHtml(UI.formatResultSummary(item))}</div>
             </div>
             <div class="item-footer">
               <span style="font-size:11px;color:var(--text-3);">${new Date(item.created_at * 1000).toLocaleString()}</span>
@@ -1693,9 +1912,15 @@
       if (files.length) addFiles(files);
     });
 
-    document.getElementById("promptInput").addEventListener("input", updatePromptCount);
+    document.getElementById("promptInput").addEventListener("input", syncPromptEditorState);
+    for (const field of ADVANCED_FIELDS) {
+      document.getElementById(field.id).addEventListener("change", syncAdvancedDirtyIndicator);
+    }
     window.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") closeModal();
+      if (event.key === "Escape") {
+        closeModal();
+        closeAdvancedDrawer();
+      }
     });
 
     initApp();
