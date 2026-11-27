@@ -107,12 +107,7 @@ header {
   width: 36px;
   height: 36px;
   flex-shrink: 0;
-  border-radius: 9px;
-  background: var(--studio-ink-2);
-  border: 1px solid #3f3f46;
-  color: #fafafa;
-  display: grid;
-  place-items: center;
+  display: block;
 }
 
 .brand-copy {

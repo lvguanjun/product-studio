@@ -446,6 +446,33 @@ def test_static_ui_logic_is_served(
     assert "computeToolbarState" in response.text
 
 
+def test_svg_favicon_is_linked_and_served(
+    ui_client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    _, parser = _parse_index_html(ui_client, auth_headers)
+    icon_links = [
+        attrs
+        for tag, attrs in parser.tags
+        if tag == "link" and attrs.get("rel") == "icon"
+    ]
+    assert icon_links == [
+        {"rel": "icon", "type": "image/svg+xml", "href": "/static/favicon.svg"}
+    ]
+    brand_icons = [
+        attrs
+        for tag, attrs in parser.tags
+        if tag == "img" and "brand-icon" in (attrs.get("class") or "").split()
+    ]
+    assert len(brand_icons) == 1
+    assert brand_icons[0].get("src") == "/static/favicon.svg"
+
+    for path in ("/static/favicon.svg", "/favicon.ico"):
+        response = ui_client.get(path, headers=auth_headers)
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("image/svg+xml")
+        assert "<svg" in response.text
+
+
 def test_single_column_layout_without_permanent_sidebar(
     ui_client: TestClient, auth_headers: dict[str, str]
 ) -> None:

@@ -331,6 +331,11 @@ async def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
 
+@router.get("/favicon.ico", include_in_schema=False)
+async def favicon() -> FileResponse:
+    return FileResponse(STATIC_DIR / "favicon.svg", media_type="image/svg+xml")
+
+
 @router.get(HEALTHZ_PATH)
 async def healthz() -> JSONResponse:
     return JSONResponse({"status": "ok"})
