@@ -127,11 +127,27 @@
     if (!current || !defaults) return false;
     const keys = Object.keys(defaults);
     for (const key of keys) {
-      if (current[key] !== defaults[key]) {
+      if (String(current[key]) !== String(defaults[key])) {
         return true;
       }
     }
     return false;
+  }
+
+  function computeAdvancedDrawerState(
+    current,
+    globalDefaults,
+    factoryDefaults,
+    { isSaving = false, isConfigLoaded = true } = {}
+  ) {
+    const hasUnsavedChanges = hasCustomAdvancedSettings(current, globalDefaults);
+    const differsFromFactory = hasCustomAdvancedSettings(current, factoryDefaults);
+    return {
+      hasUnsavedChanges: isConfigLoaded && hasUnsavedChanges,
+      canSaveGlobalDefaults: isConfigLoaded && hasUnsavedChanges && !isSaving,
+      canRevertToGlobal: isConfigLoaded && hasUnsavedChanges,
+      canResetToFactory: isConfigLoaded && differsFromFactory,
+    };
   }
 
   function shouldConfirmClearQueue(items) {
@@ -176,25 +192,6 @@
   function estimateBatchCostUsd(count, model, quality) {
     const safeCount = Math.max(0, Number(count) || 0);
     return Number((safeCount * estimateUnitCostUsd(model, quality)).toFixed(3));
-  }
-
-  function formatPreprocessTags(preprocess) {
-    if (!preprocess || !Array.isArray(preprocess.actions)) return [];
-    const tags = [];
-    for (const raw of preprocess.actions) {
-      const text = String(raw || "");
-      if (!text) continue;
-      if (text.includes("长截图") || text.includes("裁")) {
-        if (!tags.includes("已裁长截图")) tags.push("已裁长截图");
-      } else if (text.includes("缩放") || text.includes("限")) {
-        if (!tags.includes("已限边缩放")) tags.push("已限边缩放");
-      } else if (text.includes("锐化") || text.includes("小图")) {
-        if (!tags.includes("小图锐化")) tags.push("小图锐化");
-      } else if (tags.length < 3) {
-        tags.push(text.slice(0, 12));
-      }
-    }
-    return tags;
   }
 
   function formatFriendlyError(rawMessage, statusCode) {
@@ -384,11 +381,11 @@
     computeToolbarState,
     isPromptModified,
     hasCustomAdvancedSettings,
+    computeAdvancedDrawerState,
     shouldConfirmClearQueue,
     formatResultSummary,
     estimateUnitCostUsd,
     estimateBatchCostUsd,
-    formatPreprocessTags,
     formatFriendlyError,
     deriveExportFilename,
     planBatchExportNames,

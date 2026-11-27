@@ -108,8 +108,10 @@ def test_routes_honor_fastapi_dependency_overrides_for_ledger_and_output_dir(
         create_app,
         get_balance_ledger,
         get_output_dir,
+        get_settings_store,
     )
     from product_studio.balance import BalanceConfig, BalanceLedger
+    from product_studio.settings import FACTORY_DEFAULTS, SettingsStore
 
     monkeypatch.setenv("API_KEY", "sk-override-test")
 
@@ -124,10 +126,15 @@ def test_routes_honor_fastapi_dependency_overrides_for_ledger_and_output_dir(
         config_loader=lambda: BalanceConfig(monthly_budget_usd=99.0),
         now_fn=lambda: now,
     )
+    custom_settings_store = SettingsStore(override_dir)
+    custom_settings_store.save(
+        FACTORY_DEFAULTS.model_copy(update={"quality": "high", "concurrency": 4})
+    )
 
     app = create_app(output_dir=default_dir, load_env=False)
     app.dependency_overrides[get_output_dir] = lambda: override_dir
     app.dependency_overrides[get_balance_ledger] = lambda: custom_ledger
+    app.dependency_overrides[get_settings_store] = lambda: custom_settings_store
 
     client = TestClient(app)
 
@@ -136,6 +143,11 @@ def test_routes_honor_fastapi_dependency_overrides_for_ledger_and_output_dir(
     bal_resp = client.get("/api/balance", headers=auth_headers)
     assert bal_resp.status_code == 200
     assert bal_resp.json()["monthly_budget_usd"] == 99.0
+
+    cfg_resp = client.get("/api/config", headers=auth_headers)
+    assert cfg_resp.status_code == 200
+    assert cfg_resp.json()["global_defaults"]["quality"] == "high"
+    assert cfg_resp.json()["global_defaults"]["concurrency"] == 4
 
     file_resp = client.get("/api/outputs/sample.png", headers=auth_headers)
     assert file_resp.status_code == 200

@@ -6,7 +6,8 @@
 
 - **批量导入与并发出图**：支持拖拽、文件选择及 `Ctrl + V` 剪贴板粘贴导入 JPG / PNG / WEBP；支持 1–4 路并发、随时停止和失败项一键重试。
 - **场景预设与提示词定制**：内置 4 套电商出图预设（速卖通白底主图、去手/杂乱实拍棚拍化、极简绝对纯白无阴影、3C/包装盒高质感白底），支持直接编辑并保存浏览器本地模板。
-- **自动输入预处理**：生成前自动处理 EXIF 方向与透明通道，支持高宽比 `>= 1.75` 的手机长截图自动裁取上半主图区、输入长边限制 1024px 压缩及小图（`< 650px`）轻度锐化。
+- **静默输入预处理**：生成前自动完成 EXIF 方向校正、透明底铺白转 RGB、高像素长边上限 `2048px` 等比压缩并以高质量 JPEG（`quality=95`）上传，无需手动维护优化开关。
+- **跨浏览器全局默认设置**：高级设置支持单页临时调参，点击「设为全局默认」后持久化至本地输出目录 `.settings/`，对所有浏览器生效。
 - **棚拍质检与细节对比**：提供纯白 / 棋盘格 / 暗房深灰三种检视底板、80% 主图安全框参考线，以及原图与白底成品的滑块叠加对比。
 - **多规格导出与历史管理**：支持 `1000x1000`、`800x800` 与模型原生 `1024x1024` 尺寸，导出 PNG / JPG / WEBP，持久化保存至本地输出目录，支持历史浏览与一键打包 ZIP。
 - **访问鉴权与月度预算熔断**：全站启用 HTTP Basic Auth（`/healthz` 除外）；按 API Key 指纹和自然月在本地 `.balance/` 账本中实时估算消费，低于阈值时预警或自动暂停生图（返回 `402`）。
@@ -93,7 +94,7 @@ docker build -t product-studio .
 | `HOST` | 否 | CLI `127.0.0.1` / 容器 `0.0.0.0` | 服务监听地址 |
 | `PORT` | 否 | `8765` | 服务监听端口 |
 | `HOST_PORT` | 否 | `8765` | `docker-compose.yml` 宿主机映射端口 |
-| `OUTPUT_DIR` | 否 | `./outputs`（容器 `/app/outputs`） | 成品图、JSON 元数据及 `.balance/` 账本存储目录 |
+| `OUTPUT_DIR` | 否 | `./outputs`（容器 `/app/outputs`） | 成品图、JSON 元数据、`.balance/` 账本及 `.settings/` 全局默认配置存储目录 |
 | `MONTHLY_BUDGET_USD` | 否 | `25` | 单个 API Key 每月估算预算上限（美元） |
 | `BALANCE_WARN_THRESHOLD_USD` | 否 | `5.0` | 余额预警阈值（美元） |
 | `BALANCE_DISABLE_THRESHOLD_USD` | 否 | `1.0` | 熔断阈值（美元），估算余额低于或等于该值时暂停生图 |
@@ -111,7 +112,8 @@ docker build -t product-studio .
 | --- | --- |
 | `GET /` | 返回 Web 工作台页面 |
 | `GET /healthz` | 健康检查（免认证），返回 `{"status": "ok"}` |
-| `GET /api/config` | 返回可用模型、场景预设、网关状态与当前余额信息 |
+| `GET /api/config` | 返回可用模型、场景预设、出厂/全局默认设置、网关状态与当前余额信息 |
+| `PUT /api/settings` | 保存服务端全局默认设置（模型、画质、并发数、导出尺寸与格式） |
 | `GET /api/balance` | 查询当前 API Key 的月度预算与估算余额 |
 | `POST /api/generate` | 上传原图并调用模型生成白底成品图，持久化图片与元数据 |
 | `GET /api/outputs/{filename}` | 获取已生成的成品图文件 |
@@ -125,6 +127,7 @@ docker build -t product-studio .
 ├── src/product_studio/
 │   ├── app.py          # FastAPI 应用工厂、路由、图片预处理/后处理与鉴权中间件
 │   ├── balance.py      # 月度预算估算、本地账本与阈值熔断逻辑
+│   ├── settings.py     # 服务端全局默认设置的校验与持久化存储
 │   ├── cli.py          # product-studio CLI 入口
 │   └── static/         # 前端工作台（HTML / CSS / JS）
 ├── tests/              # pytest 后端与 Node.js 前端逻辑测试

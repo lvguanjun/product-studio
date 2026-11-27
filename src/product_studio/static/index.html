@@ -47,7 +47,7 @@
           <circle cx="11" cy="18" r="2" fill="currentColor" />
         </svg>
         <span>高级设置</span>
-        <span class="dirty-dot" id="advancedDirtyDot" hidden title="已修改默认参数"></span>
+        <span class="dirty-dot" id="advancedDirtyDot" hidden title="当前页面有未保存的临时参数修改"></span>
       </button>
     </div>
   </header>
@@ -194,9 +194,12 @@
         <button class="btn btn-sm" id="closeAdvancedBtn" type="button" onclick="closeAdvancedDrawer()">关闭</button>
       </div>
       <div class="drawer-body">
-        <p class="drawer-note">默认参数已针对速卖通白底主图调优，修改后会自动保存在当前浏览器中。</p>
+        <p class="drawer-note" id="advancedDrawerNote">当前修改仅在本次页面会话生效；点击下方「设为全局默认」后将同步到服务端，对所有浏览器生效。</p>
         <div>
-          <div class="section-title"><span>模型与输出参数</span></div>
+          <div class="section-title">
+            <span>模型与输出参数</span>
+            <button class="btn btn-sm btn-ghost" id="revertGlobalDefaultsBtn" type="button" onclick="revertToGlobalDefaults()" disabled>撤销本次修改</button>
+          </div>
           <div class="form-grid">
             <div class="field" style="grid-column: span 2;">
               <label for="modelSelect">生图模型</label>
@@ -237,27 +240,13 @@
             </div>
           </div>
         </div>
-        <div>
-          <div class="section-title"><span>自动输入优化（上传前生效）</span></div>
-          <div class="preprocess-box">
-            <label class="check-row">
-              <input type="checkbox" id="optAutoCrop" checked />
-              <span><strong>自动裁取手机长截图上半主图区</strong>（高宽比 &gt; 1.75 时去掉下方价格/评价区，商品文字更清晰）</span>
-            </label>
-            <label class="check-row">
-              <input type="checkbox" id="optMaxEdge" checked />
-              <span><strong>输入长边限 1024px</strong>（避免超高像素截图拖慢处理）</span>
-            </label>
-            <label class="check-row">
-              <input type="checkbox" id="optEnhanceSmall" checked />
-              <span><strong>小图轻度锐化增强</strong>（&lt; 650px 截图轻度锐化，提升小字识别率）</span>
-            </label>
-          </div>
-        </div>
       </div>
       <div class="drawer-foot">
-        <button class="btn btn-sm" id="resetAdvancedBtn" type="button" onclick="resetAdvancedSettings()">恢复默认设置</button>
-        <button class="btn btn-sm btn-primary" type="button" onclick="closeAdvancedDrawer()">完成</button>
+        <button class="btn btn-sm" id="resetFactoryDefaultsBtn" type="button" onclick="resetToFactoryDefaults()" disabled>恢复出厂默认</button>
+        <div class="drawer-foot-actions">
+          <button class="btn btn-sm btn-primary" id="saveGlobalDefaultsBtn" type="button" onclick="saveAsGlobalDefaults()" disabled>设为全局默认</button>
+          <button class="btn btn-sm" type="button" onclick="closeAdvancedDrawer()">完成</button>
+        </div>
       </div>
     </aside>
   </div>
@@ -284,7 +273,6 @@
           </div>
           <button type="button" class="safe-toggle" id="modalSafeFrameToggle" aria-pressed="false" onclick="toggleSafeFrame()">80% 主图安全框</button>
         </div>
-        <div class="modal-crop-note" id="modalCropNote" hidden>原图为长截图并已自动裁切主图区，叠加对比位置仅供参考。</div>
         <div class="slider-stage" id="sliderStage" data-inspect-bg="white" data-safe-frame="off">
           <img id="modalOrigImg" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="原图" />
           <div class="slider-after-wrap" id="sliderAfterWrap" style="clip-path: inset(0 0 0 50%);">

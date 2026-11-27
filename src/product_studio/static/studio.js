@@ -1,5 +1,4 @@
 const CUSTOM_PRESETS_KEY = "product_studio_custom_presets_v1";
-const ADVANCED_STORAGE_KEY = "product_studio_advanced_v1";
 const INSPECT_STORAGE_KEY = "product_studio_inspect_v1";
 const BLANK_IMG = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 const UI = window.ProductStudioUI;
@@ -11,26 +10,23 @@ const BUTTON_VARIANT_CLASS = {
 };
 
 const ADVANCED_FIELDS = [
-  { key: "model", id: "modelSelect", prop: "value" },
-  { key: "quality", id: "qualitySelect", prop: "value" },
-  { key: "concurrency", id: "concurrencySelect", prop: "value" },
-  { key: "exportSize", id: "exportSizeSelect", prop: "value" },
-  { key: "exportFormat", id: "exportFormatSelect", prop: "value" },
-  { key: "autoCrop", id: "optAutoCrop", prop: "checked" },
-  { key: "maxEdge", id: "optMaxEdge", prop: "checked" },
-  { key: "enhanceSmall", id: "optEnhanceSmall", prop: "checked" },
+  { key: "model", apiKey: "model", id: "modelSelect", type: "string" },
+  { key: "quality", apiKey: "quality", id: "qualitySelect", type: "string" },
+  { key: "concurrency", apiKey: "concurrency", id: "concurrencySelect", type: "int" },
+  { key: "exportSize", apiKey: "export_size", id: "exportSizeSelect", type: "string" },
+  { key: "exportFormat", apiKey: "export_format", id: "exportFormatSelect", type: "string" },
 ];
 
-const advancedDefaults = {
+let factoryDefaults = {
   model: "gpt-image-2.5-sunburst",
   quality: "medium",
-  concurrency: "2",
+  concurrency: 2,
   exportSize: "1000x1000",
   exportFormat: "png",
-  autoCrop: true,
-  maxEdge: true,
-  enhanceSmall: true,
 };
+let globalDefaults = { ...factoryDefaults };
+let isSavingGlobalDefaults = false;
+let isConfigLoaded = false;
 
 let builtInPresets = [];
 let customPresets = [];
@@ -529,65 +525,124 @@ function syncPromptEditorState() {
   document.getElementById("resetPromptBtn").disabled = !modified || !activePreset;
 }
 
+function coerceAdvancedFieldValue(field, value) {
+  return field.type === "int" ? Number(value) : String(value);
+}
+
+function normalizeSettingsFromApi(raw, fallback) {
+  const normalized = { ...fallback };
+  if (!raw || typeof raw !== "object") return normalized;
+  for (const field of ADVANCED_FIELDS) {
+    if (!(field.apiKey in raw)) continue;
+    normalized[field.key] = coerceAdvancedFieldValue(field, raw[field.apiKey]);
+  }
+  return normalized;
+}
+
+function serializeSettingsForApi(settings) {
+  const payload = {};
+  for (const field of ADVANCED_FIELDS) {
+    payload[field.apiKey] = coerceAdvancedFieldValue(field, settings[field.key]);
+  }
+  return payload;
+}
+
+function applySettingsToForm(settings) {
+  for (const field of ADVANCED_FIELDS) {
+    const el = document.getElementById(field.id);
+    const targetValue = String(settings[field.key]);
+    if (field.key === "model") {
+      const exists = Array.from(el.options).some((opt) => opt.value === targetValue);
+      if (!exists) continue;
+    }
+    el.value = targetValue;
+  }
+}
+
 function readAdvancedSettings() {
   const settings = {};
   for (const field of ADVANCED_FIELDS) {
     const el = document.getElementById(field.id);
     if (field.key === "model" && el.options.length === 0) {
-      settings[field.key] = advancedDefaults.model;
+      settings[field.key] = globalDefaults.model;
       continue;
     }
-    settings[field.key] = el[field.prop];
+    settings[field.key] = coerceAdvancedFieldValue(field, el.value);
   }
   return settings;
-}
-
-function persistAdvancedSettings() {
-  try {
-    localStorage.setItem(ADVANCED_STORAGE_KEY, JSON.stringify(readAdvancedSettings()));
-  } catch {}
-}
-
-function restoreAdvancedSettingsFromStorage() {
-  try {
-    const raw = localStorage.getItem(ADVANCED_STORAGE_KEY);
-    if (!raw) return;
-    const saved = JSON.parse(raw);
-    for (const field of ADVANCED_FIELDS) {
-      if (!(field.key in saved)) continue;
-      const el = document.getElementById(field.id);
-      if (field.key === "model") {
-        const exists = Array.from(el.options).some((opt) => opt.value === saved[field.key]);
-        if (!exists) continue;
-      }
-      el[field.prop] = saved[field.key];
-    }
-  } catch {}
 }
 
 function updateParamSummary() {
   const summaryBtn = document.getElementById("paramSummaryBtn");
   if (!summaryBtn) return;
-  const s = readAdvancedSettings();
-  const sizeLabel = s.exportSize === "native" ? "1024×1024" : s.exportSize;
-  summaryBtn.textContent = `${s.quality} · ${sizeLabel} ${String(s.exportFormat).toUpperCase()} · ${s.concurrency}路并发`;
+  const current = readAdvancedSettings();
+  const sizeLabel = current.exportSize === "native" ? "1024×1024" : current.exportSize;
+  summaryBtn.textContent = `${current.quality} · ${sizeLabel} ${String(current.exportFormat).toUpperCase()} · ${current.concurrency}路并发`;
 }
 
-function syncAdvancedDirtyIndicator() {
-  const isDirty = UI.hasCustomAdvancedSettings(readAdvancedSettings(), advancedDefaults);
-  document.getElementById("advancedDirtyDot").hidden = !isDirty;
-  document.getElementById("advancedSettingsBtn").classList.toggle("has-custom", isDirty);
+function syncAdvancedDrawerUI() {
+  const drawerState = UI.computeAdvancedDrawerState(
+    readAdvancedSettings(),
+    globalDefaults,
+    factoryDefaults,
+    { isSaving: isSavingGlobalDefaults, isConfigLoaded }
+  );
+  document.getElementById("advancedDirtyDot").hidden = !drawerState.hasUnsavedChanges;
+  document
+    .getElementById("advancedSettingsBtn")
+    .classList.toggle("has-custom", drawerState.hasUnsavedChanges);
+
+  const saveBtn = document.getElementById("saveGlobalDefaultsBtn");
+  saveBtn.disabled = !drawerState.canSaveGlobalDefaults;
+  saveBtn.textContent = isSavingGlobalDefaults ? "保存中..." : "设为全局默认";
+
+  document.getElementById("revertGlobalDefaultsBtn").disabled = !drawerState.canRevertToGlobal;
+  document.getElementById("resetFactoryDefaultsBtn").disabled = !drawerState.canResetToFactory;
+
   updateParamSummary();
   syncToolbarUI();
 }
 
-function resetAdvancedSettings() {
-  for (const field of ADVANCED_FIELDS) {
-    document.getElementById(field.id)[field.prop] = advancedDefaults[field.key];
+function revertToGlobalDefaults() {
+  applySettingsToForm(globalDefaults);
+  syncAdvancedDrawerUI();
+  showToast("已撤销本次修改，恢复为全局默认");
+}
+
+function resetToFactoryDefaults() {
+  applySettingsToForm(factoryDefaults);
+  syncAdvancedDrawerUI();
+  showToast("已恢复为出厂默认（点击「设为全局默认」可同步到服务端）");
+}
+
+async function saveAsGlobalDefaults() {
+  if (isSavingGlobalDefaults || !isConfigLoaded) return;
+  const current = readAdvancedSettings();
+  isSavingGlobalDefaults = true;
+  syncAdvancedDrawerUI();
+  try {
+    const response = await fetch("/api/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(serializeSettingsForApi(current)),
+    });
+    let data = {};
+    try {
+      data = await response.json();
+    } catch {
+      data = {};
+    }
+    if (!response.ok) {
+      throw new Error(data.detail || `保存失败 (${response.status})`);
+    }
+    globalDefaults = normalizeSettingsFromApi(data.global_defaults, current);
+    showToast("已设为全局默认，对所有浏览器生效");
+  } catch (err) {
+    showToast(err && err.message ? err.message : "保存全局默认失败，请稍后重试");
+  } finally {
+    isSavingGlobalDefaults = false;
+    syncAdvancedDrawerUI();
   }
-  persistAdvancedSettings();
-  syncAdvancedDirtyIndicator();
-  showToast("已恢复默认高级设置");
 }
 
 function openAdvancedDrawer() {
@@ -620,6 +675,8 @@ function setGatewayError(message) {
 
 async function initApp() {
   loadCustomPresets();
+  isConfigLoaded = false;
+  syncAdvancedDrawerUI();
   const initBanner = document.getElementById("initErrorBanner");
   initBanner.hidden = true;
   try {
@@ -627,8 +684,9 @@ async function initApp() {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const config = await response.json();
     builtInPresets = config.presets || [];
-    if (config.default_model) advancedDefaults.model = config.default_model;
-    if (config.default_quality) advancedDefaults.quality = config.default_quality;
+    factoryDefaults = normalizeSettingsFromApi(config.factory_defaults, factoryDefaults);
+    globalDefaults = normalizeSettingsFromApi(config.global_defaults, factoryDefaults);
+    isConfigLoaded = true;
 
     const modelSelect = document.getElementById("modelSelect");
     modelSelect.innerHTML = "";
@@ -636,12 +694,11 @@ async function initApp() {
       const option = document.createElement("option");
       option.value = modelInfo.id;
       option.textContent = modelInfo.label;
-      if (modelInfo.id === advancedDefaults.model) option.selected = true;
+      if (modelInfo.id === globalDefaults.model) option.selected = true;
       modelSelect.appendChild(option);
     }
-    document.getElementById("qualitySelect").value = advancedDefaults.quality;
-    restoreAdvancedSettingsFromStorage();
-    syncAdvancedDirtyIndicator();
+    applySettingsToForm(globalDefaults);
+    syncAdvancedDrawerUI();
 
     setGatewayError(config.api_configured ? "" : "未检测到 API_KEY");
     if (config.balance) {
@@ -724,11 +781,7 @@ function buildCardInnerHtml(item) {
 
   let metaHtml = "";
   if (item.result) {
-    const tags = UI.formatPreprocessTags(item.result.preprocess);
-    const tagHtml = tags.length
-      ? `<div class="meta-tags">${tags.map((t) => `<span class="meta-tag">${escapeHtml(t)}</span>`).join("")}</div>`
-      : "";
-    metaHtml = `<div>成品：${escapeHtml(UI.formatResultSummary(item.result))}</div>${tagHtml}`;
+    metaHtml = `<div>成品：${escapeHtml(UI.formatResultSummary(item.result))}</div>`;
   } else if (item.error) {
     metaHtml = `<div class="error-msg">${escapeHtml(item.error)}</div>`;
   } else {
@@ -960,9 +1013,6 @@ function buildFormData(file) {
   formData.append("size", "1024x1024");
   formData.append("export_size", document.getElementById("exportSizeSelect").value);
   formData.append("export_format", document.getElementById("exportFormatSelect").value);
-  formData.append("auto_crop_screenshot", document.getElementById("optAutoCrop").checked ? "true" : "false");
-  formData.append("max_input_edge", document.getElementById("optMaxEdge").checked ? "1024" : "0");
-  formData.append("enhance_small", document.getElementById("optEnhanceSmall").checked ? "true" : "false");
   return formData;
 }
 
@@ -1252,9 +1302,6 @@ function renderCompareModalForQueue(item) {
   document.getElementById("modalResultImg").src = `${item.result.url}?t=${item.result.created_at}`;
   document.getElementById("modalMetaText").textContent = UI.formatResultSummary(item.result);
 
-  const tags = UI.formatPreprocessTags(item.result.preprocess);
-  document.getElementById("modalCropNote").hidden = !tags.includes("已裁长截图");
-
   const dl = document.getElementById("modalDownloadLink");
   dl.href = item.result.url;
   dl.download = UI.deriveExportFilename(item.result);
@@ -1288,7 +1335,6 @@ function openHistoryPreviewModal(index) {
   const stage = document.getElementById("sliderStage");
   stage.classList.add("single-mode");
   document.getElementById("compareSlider").hidden = true;
-  document.getElementById("modalCropNote").hidden = true;
   document.getElementById("modalTitle").textContent = `${item.orig_name}（${index + 1}/${historyItems.length}）`;
   document.getElementById("modalOrigImg").src = BLANK_IMG;
   document.getElementById("modalResultImg").src = item.url;
@@ -1473,8 +1519,7 @@ function bindStudioEvents() {
   document.getElementById("promptInput").addEventListener("input", syncPromptEditorState);
   for (const field of ADVANCED_FIELDS) {
     document.getElementById(field.id).addEventListener("change", () => {
-      persistAdvancedSettings();
-      syncAdvancedDirtyIndicator();
+      syncAdvancedDrawerUI();
     });
   }
 

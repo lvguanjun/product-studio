@@ -35,3 +35,7 @@ _Avoid_: Multi-download, direct download, bulk save
 **Export Filename**:
 The human-readable filename presented to the user when saving a **Product Image**, derived from its **Source Image** name without internal random identifiers.
 _Avoid_: Display name, clean filename
+
+**Global Defaults**:
+The server-persisted generation and export settings (model, quality, concurrency, export size, and export format) shared across all browsers, updated only when explicitly saved.
+_Avoid_: Browser settings, local config, cached preferences

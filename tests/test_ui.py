@@ -132,28 +132,80 @@ def test_prompt_modified_detection() -> None:
 
 
 @pytest.mark.node
-def test_advanced_settings_dirty_detection() -> None:
-    defaults = {
+def test_advanced_drawer_three_tier_state() -> None:
+    factory = {
         "model": "gpt-image-2.5-sunburst",
         "quality": "medium",
-        "concurrency": "2",
+        "concurrency": 2,
         "exportSize": "1000x1000",
         "exportFormat": "png",
-        "autoCrop": True,
-        "maxEdge": True,
-        "enhanceSmall": True,
     }
-    assert not _run_node_eval(
-        f"ui.hasCustomAdvancedSettings({json.dumps(defaults)}, {json.dumps(defaults)})"
+    global_defaults = {**factory, "quality": "high", "concurrency": 3}
+
+    # Current matches server Global Defaults (but differs from factory defaults)
+    synced = _run_node_eval(
+        f"ui.computeAdvancedDrawerState({json.dumps(global_defaults)}, {json.dumps(global_defaults)}, {json.dumps(factory)})"
     )
-    changed = {**defaults, "quality": "high"}
-    assert _run_node_eval(
-        f"ui.hasCustomAdvancedSettings({json.dumps(changed)}, {json.dumps(defaults)})"
+    assert synced == {
+        "hasUnsavedChanges": False,
+        "canSaveGlobalDefaults": False,
+        "canRevertToGlobal": False,
+        "canResetToFactory": True,
+    }
+
+    # Temporary session override on current page
+    session_edit = {**global_defaults, "exportFormat": "webp"}
+    dirty = _run_node_eval(
+        f"ui.computeAdvancedDrawerState({json.dumps(session_edit)}, {json.dumps(global_defaults)}, {json.dumps(factory)})"
     )
-    changed_flag = {**defaults, "autoCrop": False}
-    assert _run_node_eval(
-        f"ui.hasCustomAdvancedSettings({json.dumps(changed_flag)}, {json.dumps(defaults)})"
+    assert dirty == {
+        "hasUnsavedChanges": True,
+        "canSaveGlobalDefaults": True,
+        "canRevertToGlobal": True,
+        "canResetToFactory": True,
+    }
+
+    # Resetting form back to factory defaults while server Global Defaults still differ
+    reset_to_factory = _run_node_eval(
+        f"ui.computeAdvancedDrawerState({json.dumps(factory)}, {json.dumps(global_defaults)}, {json.dumps(factory)})"
     )
+    assert reset_to_factory == {
+        "hasUnsavedChanges": True,
+        "canSaveGlobalDefaults": True,
+        "canRevertToGlobal": True,
+        "canResetToFactory": False,
+    }
+
+    # All three tiers equal
+    all_default = _run_node_eval(
+        f"ui.computeAdvancedDrawerState({json.dumps(factory)}, {json.dumps(factory)}, {json.dumps(factory)})"
+    )
+    assert all_default == {
+        "hasUnsavedChanges": False,
+        "canSaveGlobalDefaults": False,
+        "canRevertToGlobal": False,
+        "canResetToFactory": False,
+    }
+
+    # While saving, only save button is disabled; form-only actions remain available
+    saving = _run_node_eval(
+        f"ui.computeAdvancedDrawerState({json.dumps(session_edit)}, {json.dumps(global_defaults)}, {json.dumps(factory)}, {{ isSaving: true }})"
+    )
+    assert saving["hasUnsavedChanges"] is True
+    assert saving["canSaveGlobalDefaults"] is False
+    assert saving["canRevertToGlobal"] is True
+    assert saving["canResetToFactory"] is True
+
+    # Before /api/config finishes loading, save/revert/reset and dirty dot stay off
+    before_load = _run_node_eval(
+        f"ui.computeAdvancedDrawerState({json.dumps(session_edit)}, {json.dumps(factory)}, {json.dumps(factory)}, {{ isConfigLoaded: false }})"
+    )
+    assert before_load == {
+        "hasUnsavedChanges": False,
+        "canSaveGlobalDefaults": False,
+        "canRevertToGlobal": False,
+        "canResetToFactory": False,
+    }
 
 
 @pytest.mark.node
@@ -190,7 +242,7 @@ def test_result_meta_summary_shows_cost_and_omits_technical_noise() -> None:
 
 
 @pytest.mark.node
-def test_batch_cost_estimation_and_preprocess_tags() -> None:
+def test_batch_cost_estimation_and_friendly_errors_without_preprocess_tags() -> None:
     est = _run_node_eval(
         'ui.estimateBatchCostUsd(5, "gpt-image-2.5-sunburst", "medium")'
     )
@@ -198,10 +250,7 @@ def test_batch_cost_estimation_and_preprocess_tags() -> None:
     mini_est = _run_node_eval('ui.estimateBatchCostUsd(4, "gpt-image-1-mini", "low")')
     assert mini_est == pytest.approx(0.024, abs=1e-3)
 
-    tags = _run_node_eval(
-        'ui.formatPreprocessTags({ actions: ["长截图裁取上半区", "长边限 1024px 缩放", "小图轻度锐化"] })'
-    )
-    assert tags == ["已裁长截图", "已限边缩放", "小图锐化"]
+    assert _run_node_eval("typeof ui.formatPreprocessTags") == "undefined"
 
     friendly = _run_node_eval(
         'ui.formatFriendlyError("API 返回错误 (429): rate limit", 429)'
@@ -555,12 +604,25 @@ def test_header_has_balance_hidden_gateway_and_advanced_drawer_controls(
         "concurrencySelect",
         "exportSizeSelect",
         "exportFormatSelect",
+        "saveGlobalDefaultsBtn",
+        "revertGlobalDefaultsBtn",
+        "resetFactoryDefaultsBtn",
+    ):
+        assert required_id in by_id, f"Missing element #{required_id}"
+
+    for removed_id in (
         "optAutoCrop",
         "optMaxEdge",
         "optEnhanceSmall",
-        "resetAdvancedBtn",
+        "modalCropNote",
     ):
-        assert required_id in by_id, f"Missing element #{required_id}"
+        assert removed_id not in by_id, f"Removed element #{removed_id} still present"
+
+    studio_js = (STATIC_DIR / "studio.js").read_text(encoding="utf-8")
+    assert "ADVANCED_STORAGE_KEY" not in studio_js
+    assert "auto_crop_screenshot" not in studio_js
+    assert "max_input_edge" not in studio_js
+    assert "enhance_small" not in studio_js
 
 
 def test_removes_developer_noise_and_keeps_sticky_toolbar_css(
