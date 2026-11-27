@@ -196,5 +196,7 @@ def test_generate_persists_and_returns_clean_export_filename(
     body = response.json()
     assert body["filename"].endswith("_SKU-42_white.png")
     assert body["export_filename"] == "SKU-42_white.png"
-    persisted = json.loads((tmp_path / f"{body['id']}.json").read_text(encoding="utf-8"))
+    persisted = json.loads(
+        (tmp_path / f"{body['id']}.json").read_text(encoding="utf-8")
+    )
     assert persisted["export_filename"] == "SKU-42_white.png"

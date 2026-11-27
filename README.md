@@ -1,6 +1,6 @@
 # Product Studio
 
-面向电商场景的本地优先白底主图批量工作室（**速卖通白底主图 · 批量工作室**），基于 FastAPI 构建，通过 Cloudflare AI Gateway 或任意 OpenAI 兼容的 `/images/edits` 接口，将实拍商品图和手机/网页截图批量转换为纯白底主图。
+面向电商场景的本地优先白底主图批量工作室（**速卖通白底主图 · 批量工作室**），基于 FastAPI 构建，通过 OpenAI 或任意 OpenAI 兼容的 `/images/edits` 接口（如 Cloudflare AI Gateway），将实拍商品图和手机/网页截图批量转换为纯白底主图。
 
 ## 核心功能
 
@@ -88,7 +88,8 @@ docker build -t product-studio .
 | --- | --- | --- | --- |
 | `API_KEY` | 是* | - | 上游生图 API Key（也兼容 `OPENAI_API_KEY`） |
 | `ACCESS_KEY` | 是 | - | HTTP Basic Auth 共享密钥（用户名与密码相同；未配置时除 `/healthz` 外返回 `503`） |
-| `OPENAI_BASE_URL` | 否 | Cloudflare AI Gateway 默认地址 | 覆盖上游 OpenAI 兼容网关 Base URL |
+| `OPENAI_BASE_URL` | 否 | `https://api.openai.com/v1` | 覆盖上游 OpenAI 兼容网关 Base URL（如 Cloudflare AI Gateway） |
+| `CF_AIG_TOKEN` | 否 | 空 | 可选，配置后自动附加 `cf-aig-authorization: Bearer <token>` 请求头（用于开启鉴权的 Cloudflare AI Gateway） |
 | `HOST` | 否 | CLI `127.0.0.1` / 容器 `0.0.0.0` | 服务监听地址 |
 | `PORT` | 否 | `8765` | 服务监听端口 |
 | `HOST_PORT` | 否 | `8765` | `docker-compose.yml` 宿主机映射端口 |

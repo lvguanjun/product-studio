@@ -81,6 +81,7 @@ def allocate_unique_export_filename(
             return candidate
         counter += 1
 
+
 PRESETS = [
     {
         "id": "aliexpress_white",
@@ -232,7 +233,9 @@ async def basic_auth_middleware(
 
 def get_api_config() -> tuple[str, str]:
     api_key = (os.getenv("API_KEY") or os.getenv("OPENAI_API_KEY") or "").strip()
-    base_url = (os.getenv("OPENAI_BASE_URL") or DEFAULT_GATEWAY_URL).rstrip("/")
+    base_url = (
+        (os.getenv("OPENAI_BASE_URL") or "").strip() or DEFAULT_GATEWAY_URL
+    ).rstrip("/")
     return api_key, base_url
 
 
@@ -417,14 +420,19 @@ async def generate_image(
     if model == "gpt-image-1.5":
         form_data["input_fidelity"] = "high"
 
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "User-Agent": "ProductStudio/1.0",
+    }
+    cf_aig_token = (os.getenv("CF_AIG_TOKEN") or "").strip()
+    if cf_aig_token:
+        headers["cf-aig-authorization"] = f"Bearer {cf_aig_token}"
+
     try:
         async with httpx.AsyncClient(timeout=180.0) as client:
             response = await client.post(
                 f"{base_url}/images/edits",
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "User-Agent": "ProductStudio/1.0",
-                },
+                headers=headers,
                 data=form_data,
                 files={"image": ("input.png", processed_bytes, "image/png")},
             )

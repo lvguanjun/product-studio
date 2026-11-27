@@ -1,7 +1,7 @@
 [project]
 name = "product-studio"
 version = "0.1.0"
-description = "Batch e-commerce white-background product image generator via Cloudflare AI Gateway"
+description = "Batch e-commerce white-background product image generator via OpenAI-compatible APIs"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115.0",

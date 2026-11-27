@@ -542,6 +542,4 @@ def test_static_javascript_files_have_valid_syntax() -> None:
             text=True,
             check=False,
         )
-        assert completed.returncode == 0, (
-            f"{filename} syntax error: {completed.stderr}"
-        )
+        assert completed.returncode == 0, f"{filename} syntax error: {completed.stderr}"

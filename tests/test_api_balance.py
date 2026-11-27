@@ -169,3 +169,49 @@ def test_generate_charges_ledger_and_returns_cost_and_updated_balance(
     )
     assert saved_meta["cost_usd"] == pytest.approx(0.021289, abs=1e-6)
     assert saved_meta["key_fingerprint"]
+
+
+def test_gateway_url_defaults_to_openai_and_supports_override_and_cf_aig_token(
+    monkeypatch: pytest.MonkeyPatch,
+    api_env: dict[str, str],
+    make_client: Callable[[BalanceConfig | None], TestClient],
+) -> None:
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("CF_AIG_TOKEN", raising=False)
+    client = make_client(None)
+
+    default_cfg = client.get("/api/config", headers=api_env)
+    assert default_cfg.status_code == 200
+    assert default_cfg.json()["gateway_url"] == "https://api.openai.com/v1"
+
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://example-gateway.test/v1/")
+    monkeypatch.setenv("CF_AIG_TOKEN", "cf-secret-token")
+
+    override_cfg = client.get("/api/config", headers=api_env)
+    assert override_cfg.status_code == 200
+    assert override_cfg.json()["gateway_url"] == "https://example-gateway.test/v1"
+
+    fake_png_b64 = base64.b64encode(_make_png_bytes((255, 255, 255))).decode("ascii")
+    fake_resp = _FakeUpstreamResponse({"data": [{"b64_json": fake_png_b64}]})
+
+    with patch(
+        "product_studio.app.httpx.AsyncClient.post",
+        new_callable=AsyncMock,
+        return_value=fake_resp,
+    ) as mock_post:
+        resp = client.post(
+            "/api/generate",
+            headers=api_env,
+            files={"file": ("shoe.png", _make_png_bytes(), "image/png")},
+            data={"prompt": "white background"},
+        )
+
+    assert resp.status_code == 200
+    assert mock_post.await_args is not None
+    assert (
+        mock_post.await_args.args[0] == "https://example-gateway.test/v1/images/edits"
+    )
+    assert (
+        mock_post.await_args.kwargs["headers"]["cf-aig-authorization"]
+        == "Bearer cf-secret-token"
+    )
